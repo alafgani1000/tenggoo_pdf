@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { MergePDF } from './components/MergePDF';
 import { SplitPDF } from './components/SplitPDF';
 import { CompressPDF } from './components/CompressPDF';
-import { Layers, Scissors, Zap, FileJson } from 'lucide-react';
+import { Layers, Scissors, Zap, FileJson, ShieldCheck, Github } from 'lucide-react';
 
 type Tab = 'merge' | 'split' | 'compress';
 
@@ -36,7 +36,7 @@ function App() {
       {/* Main Content */}
       <main className="flex-1 w-full max-w-5xl mx-auto px-6 py-12 relative z-10 flex flex-col">
         {/* Navigation Tabs */}
-        <div className="flex justify-center mb-12">
+        <div className="flex justify-center mb-6">
           <div className="bg-white/70 backdrop-blur-md p-1.5 rounded-2xl shadow-sm border border-slate-200/50 flex gap-1">
             <button
               onClick={() => setActiveTab('merge')}
@@ -72,6 +72,23 @@ function App() {
               Compress
             </button>
           </div>
+        </div>
+
+        {/* Privacy & Open Source Notice */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-10 text-sm">
+          <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-100 shadow-sm">
+            <ShieldCheck size={16} className="shrink-0" />
+            <span><strong>100% Privat & Aman:</strong> File tidak diunggah ke server, diproses langsung di perangkat Anda.</span>
+          </div>
+          <a 
+            href="https://github.com/alafgani1000/tenggo_pdf" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="flex items-center gap-2 px-4 py-2 bg-white text-slate-700 rounded-full border border-slate-200 shadow-sm hover:bg-slate-50 transition-colors"
+          >
+            <Github size={16} />
+            <span>Open Source</span>
+          </a>
         </div>
 
         {/* Tab Content */}
