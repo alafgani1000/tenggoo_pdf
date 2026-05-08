@@ -1,6 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { FileDropzone } from './FileDropzone';
 import { FileText, Zap, Settings } from 'lucide-react';
+import { isTauri } from '@tauri-apps/api/core';
+import { downloadDir, join } from '@tauri-apps/api/path';
 
 type Quality = 'low' | 'medium' | 'high' | 'pro';
 
@@ -180,16 +182,30 @@ export const CompressPDF: React.FC = () => {
       outputCopy.set(bestOutput);
       const blob = new Blob([outputCopy], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
+      const outputFileName = `compressed_${file.name}`;
       const a = document.createElement('a');
       a.href = url;
-      a.download = `compressed_${file.name}`;
+      a.download = outputFileName;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
+      if (isTauri()) {
+        try {
+          const downloadsPath = await downloadDir();
+          const fullPath = await join(downloadsPath, outputFileName);
+          setResultNote(`File tersimpan di: ${fullPath}`);
+        } catch {
+          setResultNote('File sudah didownload. Lokasi default: folder Downloads.');
+        }
+      } else {
+        setResultNote('File kompres berhasil didownload.');
+      }
+
       if (bestQuality && bestQuality !== quality) {
-        setResultNote(`Agar ukuran mengecil, sistem otomatis memakai profil ${QUALITY_CONFIG[bestQuality].label}.`);
+        const fallbackInfo = `Agar ukuran mengecil, sistem otomatis memakai profil ${QUALITY_CONFIG[bestQuality].label}.`;
+        setResultNote((prev) => (prev ? `${prev} ${fallbackInfo}` : fallbackInfo));
       }
     } catch (err) {
       console.error('Compression error:', err);
