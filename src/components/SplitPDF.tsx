@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { PDFDocument } from 'pdf-lib';
 import { FileDropzone } from './FileDropzone';
-import { FileText, Scissors } from 'lucide-react';
+import { FileText, Scissors, Eye, ExternalLink } from 'lucide-react';
+import { useEffect } from 'react';
+
 
 export const SplitPDF: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -9,6 +11,17 @@ export const SplitPDF: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [totalPages, setTotalPages] = useState<number | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
 
   const handleFilesDrop = async (files: File[]) => {
     if (files.length > 0) {
@@ -136,8 +149,32 @@ export const SplitPDF: React.FC = () => {
           </div>
 
           {pdfUrl && (
-            <div className="mb-6 rounded-xl overflow-hidden border border-slate-200 shadow-inner bg-slate-100 h-[600px]">
-              <iframe src={pdfUrl} className="w-full h-full" title="PDF Preview" />
+            <div className="mb-6">
+              {isMobile ? (
+                <div className="rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-slate-50 p-8 flex flex-col items-center justify-center text-center gap-4">
+                  <div className="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center text-pink-600 mb-2">
+                    <FileText size={32} />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-slate-800">Pratinjau PDF</p>
+                    <p className="text-sm text-slate-500 mt-1 max-w-[240px]">
+                      Browser mobile tidak mendukung pratinjau langsung di dalam aplikasi.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => window.open(pdfUrl, '_blank')}
+                    className="flex items-center gap-2 px-6 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-all shadow-sm"
+                  >
+                    <Eye size={18} />
+                    Lihat Dokumen
+                    <ExternalLink size={14} className="text-slate-400" />
+                  </button>
+                </div>
+              ) : (
+                <div className="rounded-xl overflow-hidden border border-slate-200 shadow-inner bg-slate-100 h-[600px]">
+                  <iframe src={pdfUrl} className="w-full h-full" title="PDF Preview" />
+                </div>
+              )}
             </div>
           )}
 
