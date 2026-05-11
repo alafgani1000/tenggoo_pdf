@@ -3,6 +3,12 @@ import { PDFDocument } from 'pdf-lib';
 import { FileDropzone } from './FileDropzone';
 import { FileText, Scissors, Eye, ExternalLink } from 'lucide-react';
 import { useEffect } from 'react';
+import { Document, Page, pdfjs } from 'react-pdf';
+
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url
+).toString();
 
 
 export const SplitPDF: React.FC = () => {
@@ -11,7 +17,8 @@ export const SplitPDF: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [totalPages, setTotalPages] = useState<number | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [mobilePreviewUrl, setMobilePreviewUrl] = useState<string | null>(null);
+  const [previewPage, setPreviewPage] = useState(1);
+  const [previewError, setPreviewError] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -29,30 +36,16 @@ export const SplitPDF: React.FC = () => {
     };
   }, [pdfUrl]);
 
-  const toDataUrl = (sourceFile: File) =>
-    new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => reject(new Error('Failed to create preview URL'));
-      reader.readAsDataURL(sourceFile);
-    });
-
   const handleFilesDrop = async (files: File[]) => {
     if (files.length > 0) {
       const selectedFile = files[0];
       if (pdfUrl) URL.revokeObjectURL(pdfUrl);
       setFile(selectedFile);
+      setPreviewPage(1);
+      setPreviewError(null);
       
       const url = URL.createObjectURL(selectedFile);
       setPdfUrl(url);
-      setMobilePreviewUrl(null);
-
-      try {
-        const dataUrl = await toDataUrl(selectedFile);
-        setMobilePreviewUrl(dataUrl);
-      } catch (e) {
-        console.error("Could not build mobile preview URL");
-      }
       
       // Get total pages to help user
       try {
@@ -164,7 +157,8 @@ export const SplitPDF: React.FC = () => {
                 setPageRange(''); 
                 if (pdfUrl) URL.revokeObjectURL(pdfUrl);
                 setPdfUrl(null);
-                setMobilePreviewUrl(null);
+                setPreviewPage(1);
+                setPreviewError(null);
               }}
               className="text-sm text-pink-600 hover:text-pink-700 font-medium"
             >
@@ -174,38 +168,87 @@ export const SplitPDF: React.FC = () => {
 
           {pdfUrl && (
             <div className="mb-6">
-              {isMobile ? (
-                <div className="rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-slate-50 p-8 flex flex-col items-center justify-center text-center gap-4">
-                  <div className="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center text-pink-600 mb-2">
-                    <FileText size={32} />
-                  </div>
+              <div className="rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-slate-50 p-4 sm:p-5">
+                <div className="flex items-center justify-between mb-3">
                   <div>
                     <p className="font-semibold text-slate-800">Pratinjau PDF</p>
-                    <p className="text-sm text-slate-500 mt-1 max-w-[240px]">
-                      Jika pratinjau tidak tampil di bawah, ketuk tombol untuk buka dokumen di tab browser.
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {previewError ? 'Preview gagal dimuat di perangkat ini.' : `Halaman ${previewPage}${totalPages ? ` dari ${totalPages}` : ''}`}
                     </p>
                   </div>
-                  {mobilePreviewUrl && (
-                    <a
-                      href={mobilePreviewUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-6 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-all shadow-sm"
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setPreviewPage((p) => Math.max(1, p - 1))}
+                      disabled={previewPage <= 1}
+                      className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 bg-white disabled:opacity-40"
                     >
-                      <Eye size={18} />
-                      Lihat Dokumen
-                      <ExternalLink size={14} className="text-slate-400" />
-                    </a>
-                  )}
-                  <div className="w-full rounded-lg overflow-hidden border border-slate-200 bg-white h-[60vh] min-h-[320px]">
-                    <iframe src={mobilePreviewUrl || pdfUrl} className="w-full h-full" title="PDF Preview Mobile" />
+                      Prev
+                    </button>
+                    <button
+                      onClick={() => setPreviewPage((p) => (totalPages ? Math.min(totalPages, p + 1) : p + 1))}
+                      disabled={totalPages !== null && previewPage >= totalPages}
+                      className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 bg-white disabled:opacity-40"
+                    >
+                      Next
+                    </button>
                   </div>
                 </div>
-              ) : (
-                <div className="rounded-xl overflow-hidden border border-slate-200 shadow-inner bg-slate-100 h-[600px]">
-                  <iframe src={pdfUrl} className="w-full h-full" title="PDF Preview" />
-                </div>
-              )}
+
+                {previewError ? (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700 flex flex-col gap-3">
+                    <p>Preview tidak didukung browser ini. Buka file di tab baru:</p>
+                    <a
+                      href={pdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex w-fit items-center gap-2 px-4 py-2 bg-white border border-amber-200 rounded-lg text-amber-800"
+                    >
+                      <Eye size={16} />
+                      Lihat Dokumen
+                      <ExternalLink size={14} />
+                    </a>
+                  </div>
+                ) : (
+                  <div className="w-full overflow-auto rounded-lg border border-slate-200 bg-white flex justify-center p-2 sm:p-3 min-h-[360px]">
+                    <Document
+                      file={pdfUrl}
+                      loading={<p className="text-sm text-slate-500">Memuat preview...</p>}
+                      onLoadError={(error) => {
+                        console.error('Preview load error:', error);
+                        setPreviewError('failed');
+                      }}
+                    >
+                      <Page
+                        pageNumber={previewPage}
+                        width={isMobile ? Math.min(window.innerWidth - 64, 420) : 760}
+                        renderTextLayer={false}
+                        renderAnnotationLayer={false}
+                      />
+                    </Document>
+                  </div>
+                )}
+
+                {isMobile && (
+                  <p className="text-xs text-slate-500 mt-3">
+                    Jika preview terasa berat, gunakan tombol Prev/Next untuk pindah halaman.
+                  </p>
+                )}
+
+                {!previewError && (
+                  <div className="mt-3">
+                    <a
+                      href={pdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700"
+                    >
+                      <Eye size={16} />
+                      Buka di Tab Baru
+                      <ExternalLink size={14} className="text-slate-400" />
+                    </a>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
