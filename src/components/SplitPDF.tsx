@@ -5,10 +5,10 @@ import { FileText, Scissors, Eye, ExternalLink } from 'lucide-react';
 import { useEffect } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs',
-  import.meta.url
-).toString();
+pdfjs.GlobalWorkerOptions.workerPort = new Worker(
+  new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url),
+  { type: 'module' }
+);
 
 
 export const SplitPDF: React.FC = () => {
@@ -211,8 +211,9 @@ export const SplitPDF: React.FC = () => {
                 ) : (
                   <div className="w-full overflow-auto rounded-lg border border-slate-200 bg-white flex justify-center p-2 sm:p-3 min-h-[360px]">
                     <Document
-                      file={pdfUrl}
+                      file={file}
                       loading={<p className="text-sm text-slate-500">Memuat preview...</p>}
+                      onLoadSuccess={() => setPreviewError(null)}
                       onLoadError={(error) => {
                         console.error('Preview load error:', error);
                         setPreviewError('failed');
