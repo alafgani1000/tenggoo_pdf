@@ -11,6 +11,7 @@ export const SplitPDF: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [totalPages, setTotalPages] = useState<number | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [mobilePreviewUrl, setMobilePreviewUrl] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -22,14 +23,36 @@ export const SplitPDF: React.FC = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+    };
+  }, [pdfUrl]);
+
+  const toDataUrl = (sourceFile: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(new Error('Failed to create preview URL'));
+      reader.readAsDataURL(sourceFile);
+    });
 
   const handleFilesDrop = async (files: File[]) => {
     if (files.length > 0) {
       const selectedFile = files[0];
+      if (pdfUrl) URL.revokeObjectURL(pdfUrl);
       setFile(selectedFile);
       
       const url = URL.createObjectURL(selectedFile);
       setPdfUrl(url);
+      setMobilePreviewUrl(null);
+
+      try {
+        const dataUrl = await toDataUrl(selectedFile);
+        setMobilePreviewUrl(dataUrl);
+      } catch (e) {
+        console.error("Could not build mobile preview URL");
+      }
       
       // Get total pages to help user
       try {
@@ -141,6 +164,7 @@ export const SplitPDF: React.FC = () => {
                 setPageRange(''); 
                 if (pdfUrl) URL.revokeObjectURL(pdfUrl);
                 setPdfUrl(null);
+                setMobilePreviewUrl(null);
               }}
               className="text-sm text-pink-600 hover:text-pink-700 font-medium"
             >
@@ -158,17 +182,24 @@ export const SplitPDF: React.FC = () => {
                   <div>
                     <p className="font-semibold text-slate-800">Pratinjau PDF</p>
                     <p className="text-sm text-slate-500 mt-1 max-w-[240px]">
-                      Browser mobile tidak mendukung pratinjau langsung di dalam aplikasi.
+                      Jika pratinjau tidak tampil di bawah, ketuk tombol untuk buka dokumen di tab browser.
                     </p>
                   </div>
-                  <button
-                    onClick={() => window.open(pdfUrl, '_blank')}
-                    className="flex items-center gap-2 px-6 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-all shadow-sm"
-                  >
-                    <Eye size={18} />
-                    Lihat Dokumen
-                    <ExternalLink size={14} className="text-slate-400" />
-                  </button>
+                  {mobilePreviewUrl && (
+                    <a
+                      href={mobilePreviewUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 px-6 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-all shadow-sm"
+                    >
+                      <Eye size={18} />
+                      Lihat Dokumen
+                      <ExternalLink size={14} className="text-slate-400" />
+                    </a>
+                  )}
+                  <div className="w-full rounded-lg overflow-hidden border border-slate-200 bg-white h-[60vh] min-h-[320px]">
+                    <iframe src={mobilePreviewUrl || pdfUrl} className="w-full h-full" title="PDF Preview Mobile" />
+                  </div>
                 </div>
               ) : (
                 <div className="rounded-xl overflow-hidden border border-slate-200 shadow-inner bg-slate-100 h-[600px]">
