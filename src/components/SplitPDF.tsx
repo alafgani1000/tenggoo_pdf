@@ -1,34 +1,32 @@
-import { useState } from 'react';
-import { PDFDocument } from 'pdf-lib';
-import { FileDropzone } from './FileDropzone';
-import { FileText, Scissors, Eye, ExternalLink } from 'lucide-react';
-import { useEffect } from 'react';
-import { Document, Page, pdfjs } from 'react-pdf';
+import { useEffect, useState } from "react";
+import { PDFDocument } from "pdf-lib";
+import { FileDropzone } from "./FileDropzone";
+import { ExternalLink, Eye, FileText, Scissors } from "lucide-react";
 
-pdfjs.GlobalWorkerOptions.workerPort = new Worker(
-  new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url),
-  { type: 'module' }
-);
+const toDataUrl = (sourceFile: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Failed to read file as data URL"));
+    reader.readAsDataURL(sourceFile);
+  });
 
+const tryOpenInNewTab = (url: string) => {
+  const popup = window.open(url, "_blank", "noopener,noreferrer");
+  return popup !== null;
+};
 
 export const SplitPDF: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
-  const [pageRange, setPageRange] = useState('');
+  const [pageRange, setPageRange] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isOpeningPdf, setIsOpeningPdf] = useState(false);
+  const [isPreparingInlinePreview, setIsPreparingInlinePreview] =
+    useState(false);
+  const [showInlinePreview, setShowInlinePreview] = useState(false);
   const [totalPages, setTotalPages] = useState<number | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [previewPage, setPreviewPage] = useState(1);
-  const [previewError, setPreviewError] = useState<string | null>(null);
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+  const [inlinePreviewUrl, setInlinePreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     return () => {
@@ -37,68 +35,95 @@ export const SplitPDF: React.FC = () => {
   }, [pdfUrl]);
 
   const handleFilesDrop = async (files: File[]) => {
-    if (files.length > 0) {
-      const selectedFile = files[0];
-      if (pdfUrl) URL.revokeObjectURL(pdfUrl);
-      setFile(selectedFile);
-      setPreviewPage(1);
-      setPreviewError(null);
-      
-      const url = URL.createObjectURL(selectedFile);
-      setPdfUrl(url);
-      
-      // Get total pages to help user
-      try {
-        const arrayBuffer = await selectedFile.arrayBuffer();
-        const pdf = await PDFDocument.load(arrayBuffer);
-        setTotalPages(pdf.getPageCount());
-      } catch (e) {
-        console.error("Could not load PDF to count pages");
-      }
+    if (files.length === 0) return;
+
+    const selectedFile = files[0];
+    if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+
+    setFile(selectedFile);
+    setPageRange("");
+    setTotalPages(null);
+    setShowInlinePreview(false);
+    setInlinePreviewUrl(null);
+    setPdfUrl(URL.createObjectURL(selectedFile));
+
+    try {
+      const arrayBuffer = await selectedFile.arrayBuffer();
+      const pdf = await PDFDocument.load(arrayBuffer);
+      setTotalPages(pdf.getPageCount());
+    } catch (error) {
+      console.error("Could not prepare selected PDF", error);
+    }
+  };
+
+  const openPdf = async () => {
+    if (!file) return;
+    setIsOpeningPdf(true);
+
+    try {
+      if (pdfUrl && tryOpenInNewTab(pdfUrl)) return;
+
+      const dataUrl = await toDataUrl(file);
+      if (tryOpenInNewTab(dataUrl)) return;
+
+      alert(
+        "Browser memblokir tab baru. Gunakan tombol Download lalu buka filenya dari perangkat Anda.",
+      );
+    } finally {
+      setIsOpeningPdf(false);
+    }
+  };
+
+  const showPreviewInline = async () => {
+    if (!file || !pdfUrl) return;
+    setIsPreparingInlinePreview(true);
+    try {
+      setInlinePreviewUrl(pdfUrl);
+      setShowInlinePreview(true);
+    } finally {
+      setIsPreparingInlinePreview(false);
     }
   };
 
   const handleSplit = async () => {
     if (!file) return;
     setIsProcessing(true);
-    
+
     try {
       const arrayBuffer = await file.arrayBuffer();
       const pdf = await PDFDocument.load(arrayBuffer);
       const docTotalPages = pdf.getPageCount();
-      
+
       let pagesToExtract: number[] = [];
-      
+
       if (!pageRange.trim()) {
-        // Default to splitting into individual pages or maybe just extracting first page?
-        // Let's require a page range.
         alert("Please enter a page range (e.g., 1-3 or 1,4,5)");
         setIsProcessing(false);
         return;
       }
 
-      // Parse page range like "1-3, 5, 7-9"
-      const parts = pageRange.split(',').map(p => p.trim());
+      const parts = pageRange.split(",").map((p) => p.trim());
       for (const part of parts) {
-        if (part.includes('-')) {
-          const [startStr, endStr] = part.split('-');
+        if (part.includes("-")) {
+          const [startStr, endStr] = part.split("-");
           const start = parseInt(startStr, 10);
           const end = parseInt(endStr, 10);
           if (!isNaN(start) && !isNaN(end) && start <= end && start > 0) {
             for (let i = start; i <= end; i++) {
-              if (i <= docTotalPages) pagesToExtract.push(i - 1); // 0-indexed
+              if (i <= docTotalPages) pagesToExtract.push(i - 1);
             }
           }
         } else {
           const pageNum = parseInt(part, 10);
           if (!isNaN(pageNum) && pageNum > 0 && pageNum <= docTotalPages) {
-            pagesToExtract.push(pageNum - 1); // 0-indexed
+            pagesToExtract.push(pageNum - 1);
           }
         }
       }
 
-      // Deduplicate and sort
-      pagesToExtract = Array.from(new Set(pagesToExtract)).sort((a, b) => a - b);
+      pagesToExtract = Array.from(new Set(pagesToExtract)).sort(
+        (a, b) => a - b,
+      );
 
       if (pagesToExtract.length === 0) {
         alert("Invalid page range specified.");
@@ -108,13 +133,15 @@ export const SplitPDF: React.FC = () => {
 
       const newPdf = await PDFDocument.create();
       const copiedPages = await newPdf.copyPages(pdf, pagesToExtract);
-      copiedPages.forEach(page => newPdf.addPage(page));
+      copiedPages.forEach((page) => newPdf.addPage(page));
 
       const pdfBytes = await newPdf.save();
-      const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
+      const blob = new Blob([pdfBytes as BlobPart], {
+        type: "application/pdf",
+      });
       const url = URL.createObjectURL(blob);
-      
-      const a = document.createElement('a');
+
+      const a = document.createElement("a");
       a.href = url;
       a.download = `split_${file.name}`;
       document.body.appendChild(a);
@@ -137,28 +164,35 @@ export const SplitPDF: React.FC = () => {
       </div>
 
       {!file ? (
-        <FileDropzone onFilesDrop={handleFilesDrop} multiple={false} label="Drop a PDF to split" />
+        <FileDropzone
+          onFilesDrop={handleFilesDrop}
+          multiple={false}
+          label="Drop a PDF to split"
+        />
       ) : (
         <div className="bg-white/80 backdrop-blur-md rounded-2xl p-6 shadow-sm border border-slate-200">
           <div className="flex items-center justify-between mb-6 bg-slate-50 p-4 rounded-xl border border-slate-100">
             <div className="flex items-center gap-3">
               <FileText className="text-pink-500" size={24} />
               <div>
-                <p className="text-sm font-medium text-slate-700 truncate max-w-[200px] sm:max-w-xs">{file.name}</p>
+                <p className="text-sm font-medium text-slate-700 truncate max-w-[200px] sm:max-w-xs">
+                  {file.name}
+                </p>
                 <p className="text-xs text-slate-400">
-                  {(file.size / 1024 / 1024).toFixed(2)} MB {totalPages && `• ${totalPages} Pages`}
+                  {(file.size / 1024 / 1024).toFixed(2)} MB{" "}
+                  {totalPages && `| ${totalPages} Pages`}
                 </p>
               </div>
             </div>
-            <button 
-              onClick={() => { 
-                setFile(null); 
-                setTotalPages(null); 
-                setPageRange(''); 
+            <button
+              onClick={() => {
+                setFile(null);
+                setTotalPages(null);
+                setPageRange("");
                 if (pdfUrl) URL.revokeObjectURL(pdfUrl);
                 setPdfUrl(null);
-                setPreviewPage(1);
-                setPreviewError(null);
+                setShowInlinePreview(false);
+                setInlinePreviewUrl(null);
               }}
               className="text-sm text-pink-600 hover:text-pink-700 font-medium"
             >
@@ -166,90 +200,47 @@ export const SplitPDF: React.FC = () => {
             </button>
           </div>
 
-          {pdfUrl && (
-            <div className="mb-6">
-              <div className="rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-slate-50 p-4 sm:p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <p className="font-semibold text-slate-800">Pratinjau PDF</p>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      {previewError ? 'Preview gagal dimuat di perangkat ini.' : `Halaman ${previewPage}${totalPages ? ` dari ${totalPages}` : ''}`}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setPreviewPage((p) => Math.max(1, p - 1))}
-                      disabled={previewPage <= 1}
-                      className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 bg-white disabled:opacity-40"
-                    >
-                      Prev
-                    </button>
-                    <button
-                      onClick={() => setPreviewPage((p) => (totalPages ? Math.min(totalPages, p + 1) : p + 1))}
-                      disabled={totalPages !== null && previewPage >= totalPages}
-                      className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 bg-white disabled:opacity-40"
-                    >
-                      Next
-                    </button>
-                  </div>
-                </div>
+          <div className="mb-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-sm font-semibold text-slate-700">
+              Mode Ringan & Kompatibel
+            </p>
+            <p className="text-xs text-slate-500 mt-1">
+              Jika Anda lupa nomor halaman, gunakan tombol preview untuk melihat
+              isi PDF langsung di halaman ini.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                onClick={showPreviewInline}
+                disabled={isPreparingInlinePreview}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 bg-white text-sm text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+              >
+                {isPreparingInlinePreview
+                  ? "Menyiapkan Preview..."
+                  : "Tampilkan Preview"}
+              </button>
+              <button
+                onClick={openPdf}
+                disabled={isOpeningPdf}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 bg-white text-sm text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+              >
+                <Eye size={16} />
+                {isOpeningPdf ? "Membuka PDF..." : "Buka PDF"}
+                <ExternalLink size={14} className="text-slate-400" />
+              </button>
+            </div>
+          </div>
 
-                {previewError ? (
-                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700 flex flex-col gap-3">
-                    <p>Preview tidak didukung browser ini. Buka file di tab baru:</p>
-                    <a
-                      href={pdfUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex w-fit items-center gap-2 px-4 py-2 bg-white border border-amber-200 rounded-lg text-amber-800"
-                    >
-                      <Eye size={16} />
-                      Lihat Dokumen
-                      <ExternalLink size={14} />
-                    </a>
-                  </div>
-                ) : (
-                  <div className="w-full overflow-auto rounded-lg border border-slate-200 bg-white flex justify-center p-2 sm:p-3 min-h-[360px]">
-                    <Document
-                      file={file}
-                      loading={<p className="text-sm text-slate-500">Memuat preview...</p>}
-                      onLoadSuccess={() => setPreviewError(null)}
-                      onLoadError={(error) => {
-                        console.error('Preview load error:', error);
-                        setPreviewError('failed');
-                      }}
-                    >
-                      <Page
-                        pageNumber={previewPage}
-                        width={isMobile ? Math.min(window.innerWidth - 64, 420) : 760}
-                        renderTextLayer={false}
-                        renderAnnotationLayer={false}
-                      />
-                    </Document>
-                  </div>
-                )}
-
-                {isMobile && (
-                  <p className="text-xs text-slate-500 mt-3">
-                    Jika preview terasa berat, gunakan tombol Prev/Next untuk pindah halaman.
-                  </p>
-                )}
-
-                {!previewError && (
-                  <div className="mt-3">
-                    <a
-                      href={pdfUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700"
-                    >
-                      <Eye size={16} />
-                      Buka di Tab Baru
-                      <ExternalLink size={14} className="text-slate-400" />
-                    </a>
-                  </div>
-                )}
+          {showInlinePreview && inlinePreviewUrl && (
+            <div className="mb-6 rounded-xl border border-slate-200 overflow-hidden bg-white">
+              <div className="px-4 py-2 border-b border-slate-200 bg-slate-50 text-xs text-slate-600">
+                Preview Inline: jika kosong di browser tertentu, gunakan tombol
+                "Buka PDF".
               </div>
+              <iframe
+                src={inlinePreviewUrl}
+                className="w-full h-[70vh] min-h-[420px]"
+                title="PDF Inline Preview"
+              />
             </div>
           )}
 
@@ -257,11 +248,11 @@ export const SplitPDF: React.FC = () => {
             <label className="block text-sm font-medium text-slate-700 mb-2">
               Pages to Extract
             </label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={pageRange}
               onChange={(e) => setPageRange(e.target.value)}
-              placeholder="e.g., 1-5, 8, 11-13" 
+              placeholder="e.g., 1-5, 8, 11-13"
               className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-pink-500 focus:border-pink-500 outline-none transition-all"
             />
             <p className="text-xs text-slate-500 mt-2">
