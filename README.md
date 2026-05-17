@@ -1,73 +1,97 @@
-# React + TypeScript + Vite
+# Tenggoo PDF
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Tenggoo PDF adalah aplikasi untuk mengolah file PDF secara lokal (client-side): merge, split, dan compress PDF tanpa perlu mengunggah file ke server. Aplikasi ini tersedia sebagai web (Vite + React) dan desktop (Tauri).
 
-Currently, two official plugins are available:
+## Fitur
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Merge PDF: gabungkan beberapa PDF menjadi satu.
+- Split PDF: pecah PDF menjadi beberapa bagian/halaman.
+- Compress PDF: optimasi ukuran PDF (tanpa upload).
+- Privasi: file diproses di perangkat kamu, bukan di server.
 
-## React Compiler
+## Cara Kerja (Ringkas)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+UI dibuat dengan React. Kamu memilih fitur (Merge/Split/Compress) lalu memilih file PDF dari perangkat. Pemrosesan dilakukan di sisi client:
 
-## Expanding the ESLint configuration
+- Merge/Split menggunakan `pdf-lib` untuk membaca, memanipulasi, dan menghasilkan file PDF baru.
+- Compress menggunakan WebAssembly (Ghostscript) untuk melakukan optimasi/kompresi PDF langsung di browser/desktop webview.
+- Hasil diproduksi sebagai file baru yang kemudian bisa diunduh/disimpan oleh pengguna.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Catatan: karena pemrosesan dilakukan lokal, performa tergantung perangkat dan ukuran file.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Teknologi
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- Frontend: React + TypeScript + Vite
+- Styling: Tailwind CSS
+- PDF: `pdf-lib`
+- Kompresi: `@jspawn/ghostscript-wasm`
+- Desktop: Tauri (Windows bundling via `src-tauri/`)
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Menjalankan (Web)
+
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Build web:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run build
+npm run preview
 ```
+
+## Menjalankan (Desktop)
+
+Prasyarat (umum):
+
+- Node.js (disarankan Node 20)
+- Rust toolchain (stable)
+- Untuk Windows: Visual Studio Build Tools (MSVC) dan WebView2 runtime (biasanya sudah ada di Windows 11)
+
+Dev desktop:
+
+```bash
+npm install
+npm run desktop:dev
+```
+
+Build desktop:
+
+```bash
+npm run desktop:build
+```
+
+Artifact build Tauri akan muncul di folder `src-tauri/target/release/bundle/` (bergantung target OS).
+
+## Release Desktop via GitHub Actions
+
+Repo ini memakai workflow GitHub Actions: `.github/workflows/desktop-release.yml`.
+
+Trigger release:
+
+- Workflow akan jalan otomatis saat kamu push tag `v*` (contoh: `v0.2.0`).
+- Workflow akan build Tauri (Windows) dan membuat GitHub Release + upload asset hasil build.
+
+Contoh langkah release:
+
+```bash
+git pull
+git tag v0.2.0
+git push origin main v0.2.0
+```
+
+Pastikan versi aplikasi sudah dinaikkan konsisten:
+
+- `package.json`
+- `src-tauri/tauri.conf.json`
+- `src-tauri/Cargo.toml`
+
+## Privasi & Keamanan
+
+- Aplikasi ini tidak mengunggah PDF kamu ke server untuk diproses.
+- Tetap berhati-hati saat membuka PDF dari sumber yang tidak dipercaya.
+
+## Lisensi
+
+Belum ditentukan. Jika ingin open-source yang jelas, tambahkan file `LICENSE` (misalnya MIT).
