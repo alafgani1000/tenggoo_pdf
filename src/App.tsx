@@ -1,13 +1,34 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { MergePDF } from './components/MergePDF';
 import { SplitPDF } from './components/SplitPDF';
 import { CompressPDF } from './components/CompressPDF';
-import { Layers, Scissors, Zap, ShieldCheck } from 'lucide-react';
+import { Download, Layers, Scissors, ShieldCheck, Zap } from 'lucide-react';
 
 type Tab = 'merge' | 'split' | 'compress';
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('merge');
+  const privacyNotice = useMemo(() => {
+    const browserLanguages = navigator.languages?.length
+      ? navigator.languages
+      : [navigator.language];
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const isIndonesian =
+      browserLanguages.some((language) =>
+        language.toLowerCase().startsWith('id'),
+      ) ||
+      ['Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura'].includes(timeZone);
+
+    return isIndonesian
+      ? {
+        label: '100% Privat & Aman:',
+        text: 'File tidak diunggah ke server, diproses langsung di perangkat Anda.',
+      }
+      : {
+        label: '100% Private & Secure:',
+        text: 'Files are never uploaded to a server and are processed directly on your device.',
+      };
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col relative overflow-hidden bg-slate-50">
@@ -81,10 +102,21 @@ function App() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-10 text-sm">
           <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-100 shadow-sm">
             <ShieldCheck size={16} className="shrink-0" />
-            <span><strong>100% Privat & Aman:</strong> File tidak diunggah ke server, diproses langsung di perangkat Anda.</span>
+            <span>
+              <strong>{privacyNotice.label}</strong> {privacyNotice.text}
+            </span>
           </div>
           <a
-            href="https://github.com/alafgani1000/tenggo_pdf"
+            href="https://github.com/alafgani1000/tenggoo_pdf/releases"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-full border border-indigo-600 shadow-sm hover:bg-indigo-700 transition-colors"
+          >
+            <Download size={16} className="shrink-0" />
+            <span>Download</span>
+          </a>
+          <a
+            href="https://github.com/alafgani1000/tenggoo_pdf"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 px-4 py-2 bg-white text-slate-700 rounded-full border border-slate-200 shadow-sm hover:bg-slate-50 transition-colors"
