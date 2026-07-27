@@ -6,18 +6,24 @@ interface FileDropzoneProps {
   multiple?: boolean;
   accept?: string;
   label?: string;
+  helpText?: string;
 }
 
 export const FileDropzone: React.FC<FileDropzoneProps> = ({ 
   onFilesDrop, 
   multiple = true, 
   accept = "application/pdf",
-  label = "Drag & drop PDF files here, or click to select"
+  label = "Drag & drop PDF files here, or click to select",
+  helpText
 }) => {
   const handleDrop = useCallback(
     (e: React.DragEvent<HTMLDivElement>) => {
       e.preventDefault();
-      const files = Array.from(e.dataTransfer.files).filter(f => f.type === accept || accept === '*');
+      // Handle comma-separated accept string (e.g. "image/png, image/jpeg")
+      const acceptList = accept.split(',').map(a => a.trim());
+      const files = Array.from(e.dataTransfer.files).filter(f => 
+        accept === '*' || acceptList.includes(f.type) || acceptList.some(a => f.name.endsWith(a))
+      );
       if (files.length > 0) {
         if (!multiple) {
           onFilesDrop([files[0]]);
@@ -49,7 +55,9 @@ export const FileDropzone: React.FC<FileDropzoneProps> = ({
       <div className="relative glass-panel rounded-2xl p-10 flex flex-col items-center justify-center border-dashed border-2 border-indigo-200 hover:border-indigo-400 transition-colors bg-white/50 hover:bg-white/60">
         <UploadCloud className="w-16 h-16 text-indigo-500 mb-4 animate-bounce" />
         <p className="text-lg font-medium text-slate-700 text-center">{label}</p>
-        <p className="text-sm text-slate-500 mt-2 text-center">Only PDF files are supported</p>
+        <p className="text-sm text-slate-500 mt-2 text-center">
+          {helpText || (accept === "application/pdf" ? "Only PDF files are supported" : `Supported files: ${accept}`)}
+        </p>
         
         <input 
           type="file" 

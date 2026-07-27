@@ -6,6 +6,8 @@ import { FileText, Download, X, GripVertical } from 'lucide-react';
 export const MergePDF: React.FC = () => {
   const [files, setFiles] = useState<File[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const handleFilesDrop = (newFiles: File[]) => {
     setFiles((prev) => [...prev, ...newFiles]);
@@ -13,6 +15,50 @@ export const MergePDF: React.FC = () => {
 
   const removeFile = (index: number) => {
     setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    // Add a slight delay to allow the drag image to be generated before adding the class
+    setTimeout(() => {
+      if (e.target instanceof HTMLElement) {
+        e.target.classList.add('opacity-50');
+      }
+    }, 0);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (draggedIndex === null || draggedIndex === index) return;
+    setDragOverIndex(index);
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+    if (e.target instanceof HTMLElement) {
+      e.target.classList.remove('opacity-50');
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) {
+      handleDragEnd(e);
+      return;
+    }
+    
+    setFiles((prev) => {
+      const newFiles = [...prev];
+      const draggedFile = newFiles[draggedIndex];
+      newFiles.splice(draggedIndex, 1);
+      newFiles.splice(index, 0, draggedFile);
+      return newFiles;
+    });
+    
+    handleDragEnd(e);
   };
 
   const handleMerge = async () => {
@@ -61,7 +107,19 @@ export const MergePDF: React.FC = () => {
           <h3 className="font-semibold text-slate-700 mb-4">Files to merge ({files.length})</h3>
           <div className="space-y-3 mb-6">
             {files.map((file, idx) => (
-              <div key={`${file.name}-${idx}`} className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100 group">
+              <div 
+                key={`${file.name}-${idx}`} 
+                draggable
+                onDragStart={(e) => handleDragStart(e, idx)}
+                onDragOver={(e) => handleDragOver(e, idx)}
+                onDragEnd={handleDragEnd}
+                onDrop={(e) => handleDrop(e, idx)}
+                className={`flex items-center gap-3 p-3 rounded-xl border group transition-colors ${
+                  dragOverIndex === idx 
+                    ? 'bg-indigo-50 border-indigo-300' 
+                    : 'bg-slate-50 border-slate-100 hover:bg-slate-100'
+                } ${draggedIndex === idx ? 'opacity-50' : ''}`}
+              >
                 <div className="cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600">
                   <GripVertical size={20} />
                 </div>
