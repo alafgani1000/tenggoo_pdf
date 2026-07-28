@@ -4,7 +4,7 @@ import { SplitPDF } from './components/SplitPDF';
 import { CompressPDF } from './components/CompressPDF';
 import { ImageToPDF } from './components/ImageToPDF';
 import { RotatePDF } from './components/RotatePDF';
-import { Layers, Scissors, Zap, ShieldCheck, Image as ImageIcon, RotateCw, Download } from 'lucide-react';
+import { Layers, Scissors, Zap, ShieldCheck, Image as ImageIcon, RotateCw, Download, Home } from 'lucide-react';
 
 type Tab = 'merge' | 'split' | 'compress' | 'image-to-pdf' | 'rotate';
 
@@ -56,8 +56,18 @@ function App() {
               Tenggoo PDF
             </h1>
           </div>
-          <div className="text-sm font-medium text-slate-500">
-            Client-Side Tools
+          <div className="flex items-center gap-6">
+            <a 
+              href="https://tenggoo.my.id" 
+              className="flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors"
+            >
+              <Home size={16} />
+              Home
+            </a>
+            <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
+            <div className="text-sm font-medium text-slate-500">
+              Client-Side Tools
+            </div>
           </div>
         </div>
       </header>
