@@ -58,7 +58,7 @@ workerScope.onmessage = async (event: MessageEvent<CompressRequest>) => {
       printErr: (text: string) => {
         if (text) stderrLogs.push(text);
       },
-    } as any);
+    } as unknown as Parameters<typeof createGhostscriptModule>[0]);
 
     postProgress(35);
     gsModule.FS.writeFile('input.pdf', new Uint8Array(fileBuffer));
