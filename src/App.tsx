@@ -4,7 +4,7 @@ import { SplitPDF } from './components/SplitPDF';
 import { CompressPDF } from './components/CompressPDF';
 import { ImageToPDF } from './components/ImageToPDF';
 import { RotatePDF } from './components/RotatePDF';
-import { Layers, Scissors, Zap, ShieldCheck, Image as ImageIcon, RotateCw, Download, Home } from 'lucide-react';
+import { Layers, Scissors, Zap, ShieldCheck, Image as ImageIcon, RotateCw, Home } from 'lucide-react';
 
 type Tab = 'merge' | 'split' | 'compress' | 'image-to-pdf' | 'rotate';
 
@@ -82,15 +82,6 @@ function App() {
               <strong>{privacyNotice.label}</strong> {privacyNotice.text}
             </span>
           </div>
-          <a
-            href="https://github.com/alafgani1000/tenggoo_pdf/releases"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-full border border-indigo-600 shadow-sm hover:bg-indigo-700 transition-colors"
-          >
-            <Download size={16} className="shrink-0" />
-            <span>Download</span>
-          </a>
           <a
             href="https://github.com/alafgani1000/tenggoo_pdf"
             target="_blank"
