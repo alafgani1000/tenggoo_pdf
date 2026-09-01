@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://pdftools.tenggoo.my.id/sitemap.xml

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { MergePDF } from './components/MergePDF';
 import { SplitPDF } from './components/SplitPDF';
 import { CompressPDF } from './components/CompressPDF';
@@ -38,6 +38,7 @@ type Tab =
 
 interface ToolItem {
   id: Tab;
+  hash: string;
   name: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
   accentColor: string;
@@ -45,21 +46,42 @@ interface ToolItem {
 
 const TOOLS: ToolItem[] = [
   // Row 1 (Desktop) / Items 1-5
-  { id: 'merge', name: 'Merge PDF', icon: Layers, accentColor: 'text-indigo-600 bg-indigo-50 border-indigo-200' },
-  { id: 'split', name: 'Split PDF', icon: Scissors, accentColor: 'text-pink-600 bg-pink-50 border-pink-200' },
-  { id: 'reorder', name: 'Organize Pages', icon: ArrowLeftRight, accentColor: 'text-amber-600 bg-amber-50 border-amber-200' },
-  { id: 'rotate', name: 'Rotate PDF', icon: RotateCw, accentColor: 'text-blue-600 bg-blue-50 border-blue-200' },
-  { id: 'compress', name: 'Compress PDF', icon: Zap, accentColor: 'text-orange-600 bg-orange-50 border-orange-200' },
+  { id: 'merge', hash: 'merge-pdf', name: 'Gabung PDF', icon: Layers, accentColor: 'text-indigo-600 bg-indigo-50 border-indigo-200' },
+  { id: 'split', hash: 'split-pdf', name: 'Pisah PDF', icon: Scissors, accentColor: 'text-pink-600 bg-pink-50 border-pink-200' },
+  { id: 'reorder', hash: 'atur-halaman-pdf', name: 'Atur Halaman', icon: ArrowLeftRight, accentColor: 'text-amber-600 bg-amber-50 border-amber-200' },
+  { id: 'rotate', hash: 'putar-pdf', name: 'Putar PDF', icon: RotateCw, accentColor: 'text-blue-600 bg-blue-50 border-blue-200' },
+  { id: 'compress', hash: 'kompres-pdf', name: 'Kompres PDF', icon: Zap, accentColor: 'text-orange-600 bg-orange-50 border-orange-200' },
   // Row 2 (Desktop) / Items 6-10
-  { id: 'pdf-to-image', name: 'PDF to Image', icon: FileImage, accentColor: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
-  { id: 'image-to-pdf', name: 'Image to PDF', icon: ImageIcon, accentColor: 'text-teal-600 bg-teal-50 border-teal-200' },
-  { id: 'watermark', name: 'Watermark', icon: Stamp, accentColor: 'text-violet-600 bg-violet-50 border-violet-200' },
-  { id: 'page-numbers', name: 'Nomor Halaman', icon: Binary, accentColor: 'text-cyan-600 bg-cyan-50 border-cyan-200' },
-  { id: 'unlock', name: 'Unlock PDF', icon: KeyRound, accentColor: 'text-rose-600 bg-rose-50 border-rose-200' },
+  { id: 'pdf-to-image', hash: 'pdf-ke-gambar', name: 'PDF ke Gambar', icon: FileImage, accentColor: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
+  { id: 'image-to-pdf', hash: 'gambar-ke-pdf', name: 'Gambar ke PDF', icon: ImageIcon, accentColor: 'text-teal-600 bg-teal-50 border-teal-200' },
+  { id: 'watermark', hash: 'watermark-pdf', name: 'Watermark', icon: Stamp, accentColor: 'text-violet-600 bg-violet-50 border-violet-200' },
+  { id: 'page-numbers', hash: 'nomor-halaman-pdf', name: 'Nomor Halaman', icon: Binary, accentColor: 'text-cyan-600 bg-cyan-50 border-cyan-200' },
+  { id: 'unlock', hash: 'buka-kunci-pdf', name: 'Buka Kunci PDF', icon: KeyRound, accentColor: 'text-rose-600 bg-rose-50 border-rose-200' },
 ];
 
+const getTabFromHash = (): Tab => {
+  const hash = window.location.hash.replace('#', '');
+  return TOOLS.find((tool) => tool.hash === hash)?.id ?? 'merge';
+};
+
 function App() {
-  const [activeTab, setActiveTab] = useState<Tab>('merge');
+  const [activeTab, setActiveTab] = useState<Tab>(getTabFromHash);
+
+  useEffect(() => {
+    const updateTabFromHash = () => setActiveTab(getTabFromHash());
+    window.addEventListener('hashchange', updateTabFromHash);
+    return () => window.removeEventListener('hashchange', updateTabFromHash);
+  }, []);
+
+  useEffect(() => {
+    const tool = TOOLS.find((item) => item.id === activeTab);
+    if (tool) document.title = `${tool.name} Gratis Online | Tenggoo PDF`;
+  }, [activeTab]);
+
+  const selectTool = (tool: ToolItem) => {
+    setActiveTab(tool.id);
+    window.history.pushState(null, '', `#${tool.hash}`);
+  };
 
   const privacyNotice = useMemo(() => {
     const browserLanguages = navigator.languages?.length
@@ -105,9 +127,9 @@ function App() {
                 e.currentTarget.style.display = 'none';
               }}
             />
-            <h1 className="text-lg sm:text-xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 via-purple-700 to-pink-700 tracking-tight">
+            <span className="text-lg sm:text-xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 via-purple-700 to-pink-700 tracking-tight">
               Tenggoo PDF
-            </h1>
+            </span>
           </div>
 
           <div className="flex items-center gap-3 sm:gap-5">
@@ -158,7 +180,7 @@ function App() {
                 return (
                   <button
                     key={tool.id}
-                    onClick={() => setActiveTab(tool.id)}
+                    onClick={() => selectTool(tool)}
                     className={`flex items-center justify-center sm:justify-start gap-2 px-3 py-2.5 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all border ${
                       isActive
                         ? `${tool.accentColor} shadow-sm ring-2 ring-black/5 font-bold scale-[1.01]`
