@@ -127,7 +127,7 @@ function App() {
                 e.currentTarget.style.display = 'none';
               }}
             />
-            <span className="text-lg sm:text-xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 via-purple-700 to-pink-700 tracking-tight">
+            <span className="text-lg sm:text-xl font-extrabold text-indigo-600 tracking-tight">
               Tenggoo PDF
             </span>
           </div>
