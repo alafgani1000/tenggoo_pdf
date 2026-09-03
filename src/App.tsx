@@ -127,7 +127,7 @@ function App() {
                 e.currentTarget.style.display = 'none';
               }}
             />
-            <span className="text-lg sm:text-xl font-extrabold text-indigo-600 tracking-tight">
+            <span className="text-lg sm:text-xl font-extrabold text-purple-600 tracking-tight">
               Tenggoo PDF
             </span>
           </div>
