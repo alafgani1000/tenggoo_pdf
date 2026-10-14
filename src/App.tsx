@@ -9,6 +9,7 @@ import { WatermarkPDF } from './components/WatermarkPDF';
 import { PageNumberPDF } from './components/PageNumberPDF';
 import { ReorderPDF } from './components/ReorderPDF';
 import { UnlockPDF } from './components/UnlockPDF';
+import { FAQSection } from './components/FAQSection';
 import { 
   Layers, 
   Scissors, 
@@ -209,6 +210,9 @@ function App() {
           {activeTab === 'page-numbers' && <PageNumberPDF />}
           {activeTab === 'unlock' && <UnlockPDF />}
         </div>
+
+        {/* FAQ Keamanan & Privasi Section */}
+        <FAQSection />
       </main>
 
       {/* Footer */}
