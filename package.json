@@ -3,6 +3,10 @@
   "private": true,
   "version": "0.3.2",
   "type": "module",
+  "bin": {
+    "tenggoo": "./bin/tenggoo.mjs",
+    "tenggoo-mcp": "./bin/tenggoo-mcp.mjs"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -10,7 +14,10 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "desktop:dev": "tauri dev",
-    "desktop:build": "tauri build"
+    "desktop:build": "tauri build",
+    "tenggoo": "node --no-warnings --experimental-strip-types src/agent/cli.ts",
+    "mcp": "node --no-warnings --experimental-strip-types src/agent/mcp-server.ts",
+    "test": "node --no-warnings --experimental-strip-types --test src/agent/toolkit.test.ts"
   },
   "dependencies": {
     "@jspawn/ghostscript-wasm": "^0.0.2",

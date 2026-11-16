@@ -27,7 +27,6 @@ export const RotatePDF: React.FC = () => {
   const [isPreparingInlinePreview, setIsPreparingInlinePreview] = useState(false);
   const [showInlinePreview, setShowInlinePreview] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [inlinePreviewUrl, setInlinePreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -36,7 +35,6 @@ export const RotatePDF: React.FC = () => {
     const generatePreview = async () => {
       if (!file) {
         setPreviewUrl(null);
-        if (showInlinePreview) setInlinePreviewUrl(null);
         return;
       }
       setIsPreparingInlinePreview(true);
@@ -54,11 +52,6 @@ export const RotatePDF: React.FC = () => {
         const blob = new Blob([pdfBytes as unknown as BlobPart], { type: 'application/pdf' });
         url = URL.createObjectURL(blob);
         setPreviewUrl(url);
-        
-        // If inline preview is currently visible, update it too
-        if (showInlinePreview) {
-          setInlinePreviewUrl(url);
-        }
       } catch (error) {
         console.error("Error generating preview:", error);
       } finally {
@@ -82,7 +75,6 @@ export const RotatePDF: React.FC = () => {
     setRotation(90);
     setTotalPages(null);
     setShowInlinePreview(false);
-    setInlinePreviewUrl(null);
 
     try {
       const arrayBuffer = await selectedFile.arrayBuffer();
@@ -113,7 +105,6 @@ export const RotatePDF: React.FC = () => {
 
   const showPreviewInline = async () => {
     if (!file || !previewUrl) return;
-    setInlinePreviewUrl(previewUrl);
     setShowInlinePreview(true);
   };
 
@@ -175,7 +166,6 @@ export const RotatePDF: React.FC = () => {
                 setFile(null);
                 setTotalPages(null);
                 setShowInlinePreview(false);
-                setInlinePreviewUrl(null);
               }}
               className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
             >
@@ -212,14 +202,14 @@ export const RotatePDF: React.FC = () => {
             </div>
           </div>
 
-          {showInlinePreview && inlinePreviewUrl && (
+          {showInlinePreview && previewUrl && (
             <div className="mb-6 rounded-xl border border-slate-200 overflow-hidden bg-white">
               <div className="px-4 py-2 border-b border-slate-200 bg-slate-50 text-xs text-slate-600">
                 Preview Inline: jika kosong di browser tertentu, gunakan tombol
                 "Buka PDF".
               </div>
               <iframe
-                src={inlinePreviewUrl}
+                src={previewUrl}
                 className="w-full h-[70vh] min-h-[420px]"
                 title="PDF Inline Preview"
               />
