@@ -23,7 +23,7 @@ import {
   virtualFileToBlobUrl,
 } from '../utils/virtualFileWeb.ts';
 
-type UtilityTab =
+export type UtilityTab =
   | 'util.qr_generate'
   | 'util.md_to_pdf'
   | 'util.table_to_pdf'
@@ -32,6 +32,8 @@ type UtilityTab =
   | 'util.hash_checksum';
 
 interface UtilityToolsStudioProps {
+  activeToolId?: UtilityTab;
+  onSelectToolId?: (id: UtilityTab) => void;
   onSendToPipeline?: (files: VirtualFile[]) => void;
 }
 
@@ -54,8 +56,21 @@ Tenggoo Pro License,Software,2,$49
 PDF Audit Service,Consulting,1,$120
 Image Batch Pack,Add-on,5,$15`;
 
-export const UtilityToolsStudio: React.FC<UtilityToolsStudioProps> = ({ onSendToPipeline }) => {
-  const [activeTool, setActiveTool] = useState<UtilityTab>('util.qr_generate');
+export const UtilityToolsStudio: React.FC<UtilityToolsStudioProps> = ({
+  activeToolId,
+  onSelectToolId,
+  onSendToPipeline,
+}) => {
+  const [internalTool, setInternalTool] = useState<UtilityTab>('util.qr_generate');
+  const activeTool = activeToolId ?? internalTool;
+  const handleSelectTool = (id: UtilityTab) => {
+    setInternalTool(id);
+    onSelectToolId?.(id);
+    setOutputs([]);
+    setSummary('');
+    setHashJsonOutput('');
+    setError(null);
+  };
   const [inputs, setInputs] = useState<VirtualFile[]>([]);
   const [outputs, setOutputs] = useState<VirtualFile[]>([]);
   const [summary, setSummary] = useState('');
@@ -190,47 +205,56 @@ export const UtilityToolsStudio: React.FC<UtilityToolsStudioProps> = ({ onSendTo
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-semibold uppercase tracking-wider">
           <QrCode size={14} /> Document & Archive Utilities
         </div>
-        <h2 className="text-3xl font-bold text-slate-800">Utilities & Generators</h2>
+        <h2 className="text-3xl font-bold text-slate-800">
+          {activeToolId
+            ? (
+                {
+                  'util.qr_generate': 'QR Code Generator',
+                  'util.md_to_pdf': 'Markdown to PDF',
+                  'util.table_to_pdf': 'CSV / JSON Table to PDF',
+                  'util.zip_pack': 'Pack ke ZIP',
+                  'util.zip_unpack': 'Ekstrak ZIP',
+                  'util.hash_checksum': 'Hash Checksum (SHA-256 / SHA-512)',
+                } as Record<UtilityTab, string>
+              )[activeTool]
+            : 'Utilities & Generators'}
+        </h2>
         <p className="text-slate-500 text-sm sm:text-base">
-          Buat QR Code siap tempel ke PDF, ubah Markdown menjadi PDF rapi, dan kelola arsip ZIP secara lokal
+          Buat QR Code siap tempel ke PDF, ubah Markdown/Tabel menjadi PDF rapi, dan kelola arsip ZIP & checksum secara lokal
         </p>
       </div>
 
-      {/* Tabs */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 bg-white/80 backdrop-blur-md p-2 rounded-2xl border border-slate-200/80 shadow-sm">
-        {[
-          { id: 'util.qr_generate', label: 'QR Code Generator', icon: QrCode },
-          { id: 'util.md_to_pdf', label: 'Markdown to PDF', icon: FileText },
-          { id: 'util.table_to_pdf', label: 'Table CSV/JSON -> PDF', icon: Table },
-          { id: 'util.zip_pack', label: 'Pack ke ZIP', icon: Archive },
-          { id: 'util.zip_unpack', label: 'Ekstrak ZIP', icon: FolderOpen },
-          { id: 'util.hash_checksum', label: 'Hash SHA-256', icon: ShieldCheck },
-        ].map((tab) => {
-          const Icon = tab.icon;
-          const active = activeTool === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => {
-                setActiveTool(tab.id as UtilityTab);
-                setOutputs([]);
-                setSummary('');
-                setHashJsonOutput('');
-                setError(null);
-              }}
-              className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border text-xs font-bold transition-all ${
-                active
-                  ? 'bg-amber-50 border-amber-300 text-amber-800 shadow-sm'
-                  : 'border-transparent text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              <Icon size={16} />
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
-      </div>
+      {/* Tabs (hidden when Sidebar controls the active tool) */}
+      {!activeToolId && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 bg-white/80 backdrop-blur-md p-2 rounded-2xl border border-slate-200/80 shadow-sm">
+          {[
+            { id: 'util.qr_generate', label: 'QR Code Generator', icon: QrCode },
+            { id: 'util.md_to_pdf', label: 'Markdown to PDF', icon: FileText },
+            { id: 'util.table_to_pdf', label: 'Table CSV/JSON -> PDF', icon: Table },
+            { id: 'util.zip_pack', label: 'Pack ke ZIP', icon: Archive },
+            { id: 'util.zip_unpack', label: 'Ekstrak ZIP', icon: FolderOpen },
+            { id: 'util.hash_checksum', label: 'Hash SHA-256', icon: ShieldCheck },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const active = activeTool === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => handleSelectTool(tab.id as UtilityTab)}
+                className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border text-xs font-bold transition-all ${
+                  active
+                    ? 'bg-amber-50 border-amber-300 text-amber-800 shadow-sm'
+                    : 'border-transparent text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <Icon size={16} />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <div className="bg-white/85 backdrop-blur-md rounded-2xl p-6 shadow-sm border border-slate-200 space-y-5">
         {activeTool === 'util.qr_generate' && (

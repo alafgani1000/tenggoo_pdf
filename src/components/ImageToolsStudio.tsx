@@ -31,7 +31,7 @@ import {
   virtualFileToBlobUrl,
 } from '../utils/virtualFileWeb.ts';
 
-type ImageToolId =
+export type ImageToolId =
   | 'image.compress'
   | 'image.convert'
   | 'image.resize'
@@ -66,11 +66,23 @@ const IMAGE_TABS: ImageToolTab[] = [
 ];
 
 interface ImageToolsStudioProps {
+  activeToolId?: ImageToolId;
+  onSelectToolId?: (id: ImageToolId) => void;
   onSendToPipeline?: (files: VirtualFile[]) => void;
 }
 
-export const ImageToolsStudio: React.FC<ImageToolsStudioProps> = ({ onSendToPipeline }) => {
-  const [activeTool, setActiveTool] = useState<ImageToolId>('image.compress');
+export const ImageToolsStudio: React.FC<ImageToolsStudioProps> = ({
+  activeToolId,
+  onSelectToolId,
+  onSendToPipeline,
+}) => {
+  const [internalTool, setInternalTool] = useState<ImageToolId>('image.compress');
+  const activeTool = activeToolId ?? internalTool;
+  const handleSelectTool = (id: ImageToolId) => {
+    setInternalTool(id);
+    onSelectToolId?.(id);
+    setError(null);
+  };
   const [inputs, setInputs] = useState<VirtualFile[]>([]);
   const [outputs, setOutputs] = useState<VirtualFile[]>([]);
   const [summary, setSummary] = useState<string>('');
@@ -281,40 +293,45 @@ export const ImageToolsStudio: React.FC<ImageToolsStudioProps> = ({ onSendToPipe
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-50 text-teal-700 text-xs font-semibold uppercase tracking-wider">
           <FileImage size={14} /> Image Processing Suite
         </div>
-        <h2 className="text-3xl font-bold text-slate-800">Image Tools Studio</h2>
+        <h2 className="text-3xl font-bold text-slate-800">
+          {activeToolId
+            ? IMAGE_TABS.find((t) => t.id === activeTool)?.label ?? 'Image Tools Studio'
+            : 'Image Tools Studio'}
+        </h2>
         <p className="text-slate-500 text-sm sm:text-base">
-          Kompres, konversi format, resize, crop pas foto, watermark, dan hapus EXIF 100% lokal di perangkat Anda
+          {activeToolId
+            ? IMAGE_TABS.find((t) => t.id === activeTool)?.desc
+            : 'Kompres, konversi format, resize, crop pas foto, watermark, dan hapus EXIF 100% lokal di perangkat Anda'}
         </p>
       </div>
 
-      {/* Sub-tool Selector */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-white/80 backdrop-blur-md p-2.5 rounded-2xl border border-slate-200/80 shadow-sm">
-        {IMAGE_TABS.map((tab) => {
-          const Icon = tab.icon;
-          const active = activeTool === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => {
-                setActiveTool(tab.id);
-                setError(null);
-              }}
-              className={`flex items-start gap-2.5 p-2.5 rounded-xl border text-left transition-all ${
-                active
-                  ? 'bg-teal-50 border-teal-300 text-teal-800 shadow-sm'
-                  : 'border-transparent text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              <Icon size={17} className={`mt-0.5 shrink-0 ${active ? 'text-teal-600' : 'text-slate-400'}`} />
-              <div className="min-w-0">
-                <div className="text-xs font-bold truncate">{tab.label}</div>
-                <div className="text-[10px] text-slate-500 truncate">{tab.desc}</div>
-              </div>
-            </button>
-          );
-        })}
-      </div>
+      {/* Sub-tool Selector (shown only when rendered standalone without Sidebar control) */}
+      {!activeToolId && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-white/80 backdrop-blur-md p-2.5 rounded-2xl border border-slate-200/80 shadow-sm">
+          {IMAGE_TABS.map((tab) => {
+            const Icon = tab.icon;
+            const active = activeTool === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => handleSelectTool(tab.id)}
+                className={`flex items-start gap-2.5 p-2.5 rounded-xl border text-left transition-all ${
+                  active
+                    ? 'bg-teal-50 border-teal-300 text-teal-800 shadow-sm'
+                    : 'border-transparent text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <Icon size={17} className={`mt-0.5 shrink-0 ${active ? 'text-teal-600' : 'text-slate-400'}`} />
+                <div className="min-w-0">
+                  <div className="text-xs font-bold truncate">{tab.label}</div>
+                  <div className="text-[10px] text-slate-500 truncate">{tab.desc}</div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Dropzone */}
       <FileDropzone
