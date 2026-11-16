@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
 import {
-  ArrowRight,
   Bot,
   Clock,
   FileText,
@@ -9,6 +8,7 @@ import {
   QrCode,
   Search,
   Star,
+  X,
 } from 'lucide-react';
 import { CATEGORY_LABELS, type NavCategoryId, type NavToolEntry } from './navigationCatalog.ts';
 
@@ -42,7 +42,8 @@ export const AllToolsHub: React.FC<AllToolsHubProps> = ({
     () =>
       recentIds
         .map((id) => tools.find((t) => t.id === id))
-        .filter((t): t is NavToolEntry => Boolean(t)),
+        .filter((t): t is NavToolEntry => Boolean(t))
+        .slice(0, 4),
     [recentIds, tools],
   );
 
@@ -94,8 +95,29 @@ export const AllToolsHub: React.FC<AllToolsHubProps> = ({
     return (
       <div
         key={tool.id}
-        className="group relative bg-white/85 backdrop-blur-sm rounded-2xl border border-slate-200/80 hover:border-indigo-300 hover:shadow-md transition-all flex flex-col justify-between p-4"
+        className="group relative bg-white rounded-xl border border-slate-200/90 hover:border-indigo-300 hover:shadow-sm transition-all overflow-hidden"
       >
+        <button
+          type="button"
+          onClick={() => onSelectTool(tool)}
+          className="w-full h-full text-left p-4 pr-10 flex flex-col gap-2.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500"
+        >
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-lg border shrink-0 ${tool.badgeColor}`}>
+              <Icon size={17} />
+            </div>
+            <div className="min-w-0">
+              <h4 className="text-sm font-bold text-slate-900 group-hover:text-indigo-700 truncate transition-colors">
+                {tool.name}
+              </h4>
+              <span className="block text-[11px] font-medium text-slate-400 truncate">
+                {tool.subGroup}
+              </span>
+            </div>
+          </div>
+          <p className="text-xs text-slate-500 leading-relaxed line-clamp-2">{tool.shortDesc}</p>
+        </button>
+
         <button
           type="button"
           onClick={() => onToggleFavorite(tool.id)}
@@ -104,42 +126,10 @@ export const AllToolsHub: React.FC<AllToolsHubProps> = ({
           className={`absolute top-3 right-3 p-1.5 rounded-lg transition-colors ${
             isFav
               ? 'text-amber-500 bg-amber-50 hover:bg-amber-100'
-              : 'text-slate-300 hover:text-amber-500 hover:bg-slate-100 opacity-80 group-hover:opacity-100'
+              : 'text-slate-300 hover:text-amber-500 hover:bg-slate-100 opacity-70 group-hover:opacity-100'
           }`}
         >
           <Star size={14} fill={isFav ? 'currentColor' : 'none'} />
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onSelectTool(tool)}
-          className="text-left flex flex-col gap-2.5 pr-6"
-        >
-          <div className="flex items-center gap-2.5">
-            <div className={`p-2 rounded-xl border ${tool.badgeColor}`}>
-              <Icon size={18} />
-            </div>
-            <div className="min-w-0">
-              <h4 className="text-sm font-bold text-slate-800 group-hover:text-indigo-700 truncate">
-                {tool.name}
-              </h4>
-              <span className="text-[10px] font-semibold text-slate-400">
-                {tool.subGroup}
-              </span>
-            </div>
-          </div>
-          <p className="text-xs text-slate-500 leading-relaxed line-clamp-2">
-            {tool.shortDesc}
-          </p>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onSelectTool(tool)}
-          className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] font-bold text-indigo-600 group-hover:text-indigo-700"
-        >
-          <span>Buka Tool</span>
-          <ArrowRight size={13} className="transition-transform group-hover:translate-x-0.5" />
         </button>
       </div>
     );
@@ -147,37 +137,54 @@ export const AllToolsHub: React.FC<AllToolsHubProps> = ({
 
   return (
     <div className="w-full max-w-6xl mx-auto flex flex-col gap-6">
-      {/* Hero + Search */}
-      <div className="bg-white/85 backdrop-blur-md rounded-2xl p-6 border border-slate-200/80 shadow-sm space-y-4">
+      {/* Compact Studio Hub Header */}
+      <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight">
-              Katalog Semua Fitur Tenggoo Studio
-            </h1>
-            <p className="text-sm text-slate-500 mt-1">
-              Pilih fitur di bawah atau klik bintang (★) untuk menyematkan tool favorit ke sidebar.
+          <div className="space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+                Katalog Fitur Studio
+              </h1>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                {tools.length} Fitur • 100% Lokal
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-500">
+              Pilih fitur PDF, gambar, utilitas dokumen, atau otomasi pipeline langsung di perangkat
+              Anda.
             </p>
           </div>
-          <div className="relative w-full md:w-80">
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+
+          <div className="relative w-full md:w-72 shrink-0">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Filter fitur (misal: sensor, qr, tabel)..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+              className="w-full pl-9 pr-8 py-2 rounded-xl border border-slate-200 bg-slate-50/70 focus:bg-white text-sm text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
             />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                aria-label="Hapus pencarian"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Category Filter Pills */}
-        <div className="flex flex-wrap gap-2">
+        {/* Category Filter Tabs */}
+        <div className="flex flex-wrap gap-1.5 pt-1 border-t border-slate-100">
           {[
-            { id: 'all', label: `Semua (${counts.all})`, icon: Layers },
+            { id: 'all', label: `Semua Fitur (${counts.all})`, icon: Layers },
             { id: 'pdf', label: `PDF Tools (${counts.pdf})`, icon: FileText },
             { id: 'image', label: `Image Tools (${counts.image})`, icon: ImageIcon },
             { id: 'utility', label: `Doc & Utilities (${counts.utility})`, icon: QrCode },
-            { id: 'pipeline', label: `AI & Pipeline (${counts.pipeline})`, icon: Bot },
+            { id: 'pipeline', label: `AI Pipeline (${counts.pipeline})`, icon: Bot },
           ].map((pill) => {
             const Icon = pill.icon;
             const active = categoryFilter === pill.id;
@@ -186,13 +193,13 @@ export const AllToolsHub: React.FC<AllToolsHubProps> = ({
                 key={pill.id}
                 type="button"
                 onClick={() => setCategoryFilter(pill.id as typeof categoryFilter)}
-                className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-bold transition-all ${
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                   active
-                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }`}
               >
-                <Icon size={14} />
+                <Icon size={13} />
                 <span>{pill.label}</span>
               </button>
             );
@@ -202,10 +209,10 @@ export const AllToolsHub: React.FC<AllToolsHubProps> = ({
 
       {/* Favorites Section */}
       {!query.trim() && categoryFilter === 'all' && favoriteTools.length > 0 && (
-        <section className="space-y-3">
-          <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-amber-700">
-            <Star size={14} fill="currentColor" />
-            <span>Favorit Saya ({favoriteTools.length})</span>
+        <section className="space-y-2.5">
+          <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-700 px-0.5">
+            <Star size={13} fill="currentColor" />
+            <span>Favorit ({favoriteTools.length})</span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {favoriteTools.map(renderToolCard)}
@@ -215,9 +222,9 @@ export const AllToolsHub: React.FC<AllToolsHubProps> = ({
 
       {/* Recent Tools Section */}
       {!query.trim() && categoryFilter === 'all' && recentTools.length > 0 && (
-        <section className="space-y-3">
-          <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-slate-500">
-            <Clock size={14} />
+        <section className="space-y-2">
+          <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500 px-0.5">
+            <Clock size={13} />
             <span>Terakhir Dipakai</span>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -228,9 +235,9 @@ export const AllToolsHub: React.FC<AllToolsHubProps> = ({
                   key={`recent-${tool.id}`}
                   type="button"
                   onClick={() => onSelectTool(tool)}
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50 text-xs font-semibold text-slate-700 shadow-sm transition-all"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:border-indigo-300 hover:text-indigo-700 text-xs font-semibold text-slate-700 shadow-sm transition-colors"
                 >
-                  <Icon size={14} className="text-indigo-600" />
+                  <Icon size={13} className="text-slate-400" />
                   <span>{tool.name}</span>
                 </button>
               );
@@ -241,22 +248,22 @@ export const AllToolsHub: React.FC<AllToolsHubProps> = ({
 
       {/* Categorized Bento Catalog */}
       {groupedByCategory.length === 0 ? (
-        <div className="bg-white/80 rounded-2xl p-10 text-center border border-slate-200 text-sm text-slate-500">
+        <div className="bg-white rounded-2xl p-10 text-center border border-slate-200 text-sm text-slate-500">
           Tidak ada fitur yang cocok dengan pencarian &ldquo;{query}&rdquo;.
         </div>
       ) : (
         groupedByCategory.map((section) => (
-          <section key={section.category} className="space-y-4">
+          <section key={section.category} className="space-y-3.5">
             <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
-              <h2 className="text-lg font-extrabold text-slate-800">{section.label}</h2>
-              <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
-                {section.count} Tool
+              <h2 className="text-base font-bold text-slate-900">{section.label}</h2>
+              <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                {section.count} fitur
               </span>
             </div>
 
             {section.subGroups.map((sub) => (
-              <div key={sub.name} className="space-y-2.5">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              <div key={sub.name} className="space-y-2">
+                <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
                   {sub.name}
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

@@ -23,14 +23,14 @@ import {
   type NavCategoryId,
   type NavToolEntry,
 } from './components/navigationCatalog';
-import { FAQSection } from './components/FAQSection';
+import { FAQSection, PrivacyPolicyView } from './components/FAQSection';
 import type { VirtualFile } from './core/types';
 import {
   Bot,
   ChevronDown,
   ChevronRight,
+  CircleQuestionMark,
   FileText,
-  Home,
   Image as ImageIcon,
   LayoutGrid,
   Menu,
@@ -47,7 +47,11 @@ import {
 const FAVORITES_STORAGE_KEY = 'tenggoo_favorite_tools_v1';
 const RECENTS_STORAGE_KEY = 'tenggoo_recent_tools_v1';
 
-type ActiveView = { kind: 'hub' } | { kind: 'tool'; toolId: string };
+type ActiveView =
+  | { kind: 'hub' }
+  | { kind: 'privacy' }
+  | { kind: 'faq' }
+  | { kind: 'tool'; toolId: string };
 
 function readStoredIds(key: string): string[] {
   try {
@@ -64,6 +68,12 @@ function resolveViewFromHash(): ActiveView {
   const hash = window.location.hash.replace('#', '').trim();
   if (!hash || hash === 'semua-fitur') {
     return { kind: 'hub' };
+  }
+  if (hash === 'privacy-policy' || hash === 'privasi' || hash === 'keamanan') {
+    return { kind: 'privacy' };
+  }
+  if (hash === 'faq') {
+    return { kind: 'faq' };
   }
   const matched = findNavToolByHash(hash);
   if (matched) {
@@ -119,17 +129,37 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (activeView.kind === 'privacy') {
+      document.title = 'Privacy & Policy | Tenggoo Studio';
+      return;
+    }
+    if (activeView.kind === 'faq') {
+      document.title = 'FAQ Keamanan | Tenggoo Studio';
+      return;
+    }
     if (!activeTool) {
       document.title = 'Tenggoo Studio — PDF, Image, Utilities & AI Agent';
       return;
     }
     document.title = `${activeTool.name} | Tenggoo Studio`;
-  }, [activeTool]);
+  }, [activeTool, activeView.kind]);
 
   const openHub = useCallback(() => {
     setActiveView({ kind: 'hub' });
     setMobileDrawerOpen(false);
     window.history.pushState(null, '', '#semua-fitur');
+  }, []);
+
+  const openPrivacy = useCallback(() => {
+    setActiveView({ kind: 'privacy' });
+    setMobileDrawerOpen(false);
+    window.history.pushState(null, '', '#privacy-policy');
+  }, []);
+
+  const openFaq = useCallback(() => {
+    setActiveView({ kind: 'faq' });
+    setMobileDrawerOpen(false);
+    window.history.pushState(null, '', '#faq');
   }, []);
 
   const recordRecentTool = useCallback((toolId: string) => {
@@ -186,10 +216,28 @@ function App() {
     const hubEntry: CommandPaletteItem = {
       id: 'cmd-hub-all',
       title: 'Semua Fitur (Katalog Bento Hub)',
-      subtitle: 'Lihat seluruh 37 tool PDF, Image, Utility & Pipeline dalam satu halaman',
+      subtitle: `Lihat seluruh ${NAV_TOOLS.length} fitur PDF, Image, Utility & Pipeline dalam satu halaman`,
       categoryLabel: 'Navigasi',
       keywords: 'home hub semua fitur katalog all tools',
       onSelect: openHub,
+    };
+
+    const privacyEntry: CommandPaletteItem = {
+      id: 'cmd-privacy-policy',
+      title: 'Privacy & Policy (Kebijakan Privasi)',
+      subtitle: 'Penjelasan arsitektur 100% client-side, komitmen data, dan verifikasi offline',
+      categoryLabel: 'Privacy & Policy',
+      keywords: 'privacy policy privasi kebijakan keamanan security offline client-side',
+      onSelect: openPrivacy,
+    };
+
+    const faqEntry: CommandPaletteItem = {
+      id: 'cmd-faq-security',
+      title: 'FAQ (Pertanyaan Umum seputar Keamanan)',
+      subtitle: 'Daftar tanya jawab mengenai keamanan dokumen, kata sandi, redaksi & teknologi lokal',
+      categoryLabel: 'Privacy & Policy',
+      keywords: 'faq pertanyaan umum keamanan bocor password client-side wasm',
+      onSelect: openFaq,
     };
 
     const toolEntries: CommandPaletteItem[] = NAV_TOOLS.map((tool) => ({
@@ -201,8 +249,8 @@ function App() {
       onSelect: () => selectTool(tool),
     }));
 
-    return [hubEntry, ...toolEntries];
-  }, [openHub, selectTool]);
+    return [hubEntry, privacyEntry, faqEntry, ...toolEntries];
+  }, [openHub, openPrivacy, openFaq, selectTool]);
 
   const sidebarFilteredTools = useMemo(() => {
     const q = sidebarSearch.trim().toLowerCase();
@@ -249,87 +297,98 @@ function App() {
     });
   }, [sidebarFilteredTools]);
 
-  const privacyNotice = useMemo(() => {
-    const browserLanguages = navigator.languages?.length
-      ? navigator.languages
-      : [navigator.language];
-    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const isIndonesian =
-      browserLanguages.some((language) => language.toLowerCase().startsWith('id')) ||
-      ['Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura'].includes(timeZone);
-
-    return isIndonesian
-      ? {
-          label: '100% Privat & Agent-Ready:',
-          text: 'Semua tool PDF, Image & Utility berjalan lokal di perangkat Anda dan siap diakses AI Agent via CLI/MCP.',
-        }
-      : {
-          label: '100% Private & Agent-Ready:',
-          text: 'All PDF, Image & Utility tools run locally on your device and are directly callable by AI Agents via CLI/MCP.',
-        };
-  }, []);
-
   const renderSidebarInner = (isCompactRail: boolean) => {
     const pipelineTool = findNavToolById('pipeline:studio');
     const isHubActive = activeView.kind === 'hub';
+    const isPrivacyActive = activeView.kind === 'privacy';
+    const isFaqActive = activeView.kind === 'faq';
 
     if (isCompactRail) {
       return (
-        <div className="flex flex-col items-center py-3 gap-2">
-          <button
-            type="button"
-            onClick={() => setSidebarCollapsed(false)}
-            className="p-2.5 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800"
-            title="Perluas Sidebar"
-          >
-            <PanelLeftOpen size={18} />
-          </button>
-          <button
-            type="button"
-            onClick={openHub}
-            className={`p-2.5 rounded-xl transition-colors ${
-              isHubActive
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-            title="Semua Fitur (Hub)"
-          >
-            <LayoutGrid size={18} />
-          </button>
-          {pipelineTool && (
+        <div className="flex flex-col items-center justify-between h-full py-3">
+          <div className="flex flex-col items-center gap-1.5">
             <button
               type="button"
-              onClick={() => selectTool(pipelineTool)}
-              className={`p-2.5 rounded-xl transition-colors ${
-                activeTool?.id === pipelineTool.id
-                  ? 'bg-purple-600 text-white shadow-sm'
-                  : 'text-purple-600 hover:bg-purple-50'
-              }`}
-              title={pipelineTool.name}
+              onClick={() => setSidebarCollapsed(false)}
+              className="p-2.5 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors"
+              title="Perluas Sidebar"
             >
-              <Bot size={18} />
+              <PanelLeftOpen size={18} />
             </button>
-          )}
-          <div className="w-8 h-px bg-slate-200 my-1" />
-          {favoriteToolList.slice(0, 6).map((fav) => {
-            const Icon = fav.icon;
-            const isActive = activeTool?.id === fav.id;
-            return (
+            <button
+              type="button"
+              onClick={openHub}
+              className={`p-2.5 rounded-xl transition-colors ${
+                isHubActive
+                  ? 'bg-slate-900 text-white shadow-sm'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+              title="Semua Fitur (Hub)"
+            >
+              <LayoutGrid size={18} />
+            </button>
+            {pipelineTool && (
               <button
-                key={`rail-fav-${fav.id}`}
                 type="button"
-                onClick={() => selectTool(fav)}
+                onClick={() => selectTool(pipelineTool)}
                 className={`p-2.5 rounded-xl transition-colors ${
-                  isActive
-                    ? 'bg-indigo-100 text-indigo-700'
-                    : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'
+                  activeTool?.id === pipelineTool.id
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'text-indigo-600 hover:bg-indigo-50'
                 }`}
-                title={fav.name}
+                title={pipelineTool.name}
               >
-                <Icon size={17} />
+                <Bot size={18} />
               </button>
-            );
-          })}
+            )}
+            <div className="w-7 h-px bg-slate-200 my-1" />
+            {favoriteToolList.slice(0, 6).map((fav) => {
+              const Icon = fav.icon;
+              const isActive = activeTool?.id === fav.id;
+              return (
+                <button
+                  key={`rail-fav-${fav.id}`}
+                  type="button"
+                  onClick={() => selectTool(fav)}
+                  className={`p-2.5 rounded-xl transition-colors ${
+                    isActive
+                      ? 'bg-indigo-50 text-indigo-700'
+                      : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'
+                  }`}
+                  title={fav.name}
+                >
+                  <Icon size={17} />
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex flex-col items-center gap-1.5 pt-2 border-t border-slate-200/80">
+            <button
+              type="button"
+              onClick={openPrivacy}
+              className={`p-2.5 rounded-xl transition-colors ${
+                isPrivacyActive
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'text-emerald-700 hover:bg-emerald-50'
+              }`}
+              title="Privacy & Policy"
+            >
+              <ShieldCheck size={18} />
+            </button>
+            <button
+              type="button"
+              onClick={openFaq}
+              className={`p-2.5 rounded-xl transition-colors ${
+                isFaqActive
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+              title="FAQ Keamanan"
+            >
+              <CircleQuestionMark size={18} />
+            </button>
+          </div>
         </div>
       );
     }
@@ -339,13 +398,13 @@ function App() {
         {/* Top Controls + Search */}
         <div className="p-3 border-b border-slate-200/80 space-y-2.5">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 px-1">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1">
               Navigasi Studio
             </span>
             <button
               type="button"
               onClick={() => setSidebarCollapsed(true)}
-              className="hidden lg:inline-flex p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+              className="hidden lg:inline-flex p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
               title="Ciutkan Sidebar"
             >
               <PanelLeftClose size={16} />
@@ -367,7 +426,7 @@ function App() {
               value={sidebarSearch}
               onChange={(e) => setSidebarSearch(e.target.value)}
               placeholder="Filter menu..."
-              className="w-full pl-8 pr-7 py-1.5 rounded-xl border border-slate-200 bg-slate-50/80 focus:bg-white text-xs text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full pl-8 pr-7 py-1.5 rounded-lg border border-slate-200 bg-slate-50/80 focus:bg-white text-xs text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
             />
             {sidebarSearch && (
               <button
@@ -388,17 +447,17 @@ function App() {
             <button
               type="button"
               onClick={openHub}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${
                 isHubActive
-                  ? 'bg-indigo-600 text-white shadow-sm'
+                  ? 'bg-slate-900 text-white shadow-sm'
                   : 'text-slate-700 hover:bg-slate-100'
               }`}
             >
-              <LayoutGrid size={16} />
-              <span>Semua Fitur (Hub)</span>
+              <LayoutGrid size={15} />
+              <span>Semua Fitur</span>
               <span
-                className={`ml-auto text-[10px] px-1.5 py-0.5 rounded-full ${
-                  isHubActive ? 'bg-white/20 text-white' : 'bg-slate-200/70 text-slate-600'
+                className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+                  isHubActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
                 }`}
               >
                 {NAV_TOOLS.length}
@@ -409,14 +468,14 @@ function App() {
               <button
                 type="button"
                 onClick={() => selectTool(pipelineTool)}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${
                   activeTool?.id === pipelineTool.id
-                    ? 'bg-purple-600 text-white shadow-sm'
-                    : 'text-purple-700 bg-purple-50/70 hover:bg-purple-100/80'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'text-indigo-700 bg-indigo-50/70 hover:bg-indigo-100/80'
                 }`}
               >
-                <Bot size={16} />
-                <span>AI Agent & Pipeline</span>
+                <Bot size={15} />
+                <span>AI Agent &amp; Pipeline</span>
               </button>
             )}
           </div>
@@ -424,7 +483,7 @@ function App() {
           {/* Favorites */}
           {!sidebarSearch.trim() && favoriteToolList.length > 0 && (
             <div className="space-y-1">
-              <div className="px-2 flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-amber-600">
+              <div className="px-2 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-600">
                 <Star size={11} fill="currentColor" />
                 <span>Favorit ({favoriteToolList.length})</span>
               </div>
@@ -436,9 +495,9 @@ function App() {
                     key={`side-fav-${tool.id}`}
                     type="button"
                     onClick={() => selectTool(tool)}
-                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
+                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                       active
-                        ? 'bg-indigo-50 text-indigo-700 font-bold'
+                        ? 'bg-indigo-50 text-indigo-700 font-semibold'
                         : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                     }`}
                   >
@@ -470,10 +529,12 @@ function App() {
                 >
                   <div className="flex items-center gap-1.5">
                     <SectionIcon size={14} className={section.accentText} />
-                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-700">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
                       {section.label}
                     </span>
-                    <span className="text-[10px] font-bold text-slate-400">({section.count})</span>
+                    <span className="text-[10px] font-semibold text-slate-400">
+                      ({section.count})
+                    </span>
                   </div>
                   {isExpanded ? (
                     <ChevronDown size={14} className="text-slate-400" />
@@ -486,7 +547,7 @@ function App() {
                   <div className="space-y-2.5 pl-1">
                     {section.subGroups.map((sub) => (
                       <div key={sub.name} className="space-y-0.5">
-                        <div className="px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                        <div className="px-2 text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
                           {sub.name}
                         </div>
                         {sub.items.map((tool) => {
@@ -497,9 +558,9 @@ function App() {
                               key={tool.id}
                               type="button"
                               onClick={() => selectTool(tool)}
-                              className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs transition-all ${
+                              className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs transition-colors ${
                                 isActive
-                                  ? 'bg-indigo-600 text-white font-bold shadow-sm'
+                                  ? 'bg-indigo-600 text-white font-semibold shadow-sm'
                                   : 'text-slate-600 font-medium hover:bg-slate-100 hover:text-slate-900'
                               }`}
                             >
@@ -519,11 +580,56 @@ function App() {
             );
           })}
         </div>
+
+        {/* Sticky Sidebar Footer: Grup Menu Privacy & Policy */}
+        <div className="p-2.5 border-t border-slate-200/80 bg-white space-y-1">
+          <div className="px-2 pb-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            Privacy &amp; Policy
+          </div>
+          <button
+            type="button"
+            onClick={openPrivacy}
+            className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              isPrivacyActive
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'text-emerald-900 bg-emerald-50/70 hover:bg-emerald-100/80'
+            }`}
+          >
+            <ShieldCheck
+              size={14}
+              className={`shrink-0 ${isPrivacyActive ? 'text-white' : 'text-emerald-600'}`}
+            />
+            <span className="truncate">Privacy &amp; Policy</span>
+          </button>
+          <button
+            type="button"
+            onClick={openFaq}
+            className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              isFaqActive
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'text-slate-700 hover:bg-slate-100'
+            }`}
+          >
+            <CircleQuestionMark
+              size={14}
+              className={`shrink-0 ${isFaqActive ? 'text-white' : 'text-indigo-600'}`}
+            />
+            <span className="truncate">FAQ Keamanan</span>
+          </button>
+        </div>
       </div>
     );
   };
 
   const renderActiveWorkspaceTool = () => {
+    if (activeView.kind === 'privacy') {
+      return <PrivacyPolicyView onOpenFaq={openFaq} />;
+    }
+
+    if (activeView.kind === 'faq') {
+      return <FAQSection onOpenPrivacy={openPrivacy} />;
+    }
+
     if (!activeTool) {
       return (
         <AllToolsHub
@@ -586,22 +692,20 @@ function App() {
   };
 
   const isCurrentToolFavorited = activeTool ? favoriteIds.includes(activeTool.id) : false;
+  const isPrivacyActive = activeView.kind === 'privacy';
+  const isFaqActive = activeView.kind === 'faq';
+  const showBreadcrumb = Boolean(activeTool) || isPrivacyActive || isFaqActive;
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-x-hidden bg-slate-50 font-sans text-slate-900 selection:bg-indigo-500 selection:text-white">
-      {/* Ambient Background Blobs */}
-      <div className="fixed top-[-10%] left-[-10%] w-[45%] h-[45%] rounded-full bg-indigo-300/20 blur-3xl mix-blend-multiply pointer-events-none"></div>
-      <div className="fixed bottom-[-10%] right-[-10%] w-[45%] h-[45%] rounded-full bg-pink-300/20 blur-3xl mix-blend-multiply pointer-events-none"></div>
-      <div className="fixed top-[30%] right-[5%] w-[25%] h-[25%] rounded-full bg-amber-300/20 blur-3xl mix-blend-multiply pointer-events-none"></div>
-
-      {/* Header */}
-      <header className="w-full relative z-30 border-b border-slate-200/70 bg-white/85 sticky top-0 backdrop-blur-md">
-        <div className="max-w-[1600px] mx-auto px-3 sm:px-5 py-3 flex items-center justify-between gap-2">
+    <div className="min-h-screen flex flex-col bg-slate-50/70 font-sans text-slate-900 selection:bg-indigo-500 selection:text-white">
+      {/* Studio Top Header */}
+      <header className="w-full sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 backdrop-blur-sm">
+        <div className="max-w-[1600px] mx-auto px-3 sm:px-5 h-14 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <button
               type="button"
               onClick={() => setMobileDrawerOpen(true)}
-              className="lg:hidden p-2 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
+              className="lg:hidden p-2 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
               aria-label="Buka Menu"
             >
               <Menu size={18} />
@@ -614,29 +718,29 @@ function App() {
               <img
                 src="/icon.png"
                 alt="Tenggoo Studio"
-                width={30}
-                height={30}
+                width={28}
+                height={28}
                 className="block rounded-lg shadow-sm"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
                 }}
               />
               <div className="flex items-center gap-2">
-                <span className="text-base sm:text-lg font-extrabold text-purple-600 tracking-tight">
+                <span className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">
                   Tenggoo Studio
                 </span>
-                <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-200">
-                  38 Tools • CLI & MCP
+                <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/80">
+                  v2.0 Local
                 </span>
               </div>
             </button>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setIsPaletteOpen(true)}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-indigo-700 bg-slate-100/90 hover:bg-indigo-50 border border-slate-200 px-2.5 py-1.5 rounded-xl transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200/70 border border-slate-200/80 px-2.5 py-1.5 rounded-lg transition-colors"
               title="Cari fitur cepat (Ctrl+K)"
             >
               <Search size={14} />
@@ -646,26 +750,44 @@ function App() {
               </kbd>
             </button>
 
-            <a
-              href="https://tenggoo.my.id"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden sm:flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-600 hover:text-indigo-600 transition-colors py-1 px-2 rounded-lg hover:bg-slate-100"
+            <button
+              type="button"
+              onClick={openPrivacy}
+              className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-colors ${
+                isPrivacyActive
+                  ? 'bg-emerald-600 text-white border-emerald-600'
+                  : 'bg-white text-slate-700 border-slate-200 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-200'
+              }`}
+              title="Privacy & Policy"
             >
-              <Home size={15} />
-              <span>Home</span>
-            </a>
+              <ShieldCheck size={14} className={isPrivacyActive ? 'text-white' : 'text-emerald-600'} />
+              <span className="hidden md:inline">Privacy &amp; Policy</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={openFaq}
+              className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-colors ${
+                isFaqActive
+                  ? 'bg-indigo-600 text-white border-indigo-600'
+                  : 'bg-white text-slate-700 border-slate-200 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200'
+              }`}
+              title="Menu Khusus FAQ"
+            >
+              <CircleQuestionMark size={14} className={isFaqActive ? 'text-white' : 'text-indigo-600'} />
+              <span className="hidden xs:inline">FAQ</span>
+            </button>
 
             <a
               href="https://github.com/alafgani1000/tenggoo_pdf"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-600 hover:text-indigo-600 transition-colors py-1 px-2 rounded-lg hover:bg-slate-100"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors py-1.5 px-2.5 rounded-lg hover:bg-slate-100"
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <path d="M12 2C6.477 2 2 6.484 2 12.021c0 4.428 2.865 8.184 6.839 9.504.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.605-3.369-1.342-3.369-1.342-.454-1.154-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0 0 22 12.021C22 6.484 17.522 2 12 2z" />
               </svg>
-              <span className="hidden xs:inline">GitHub</span>
+              <span className="hidden sm:inline">GitHub</span>
             </a>
           </div>
         </div>
@@ -688,10 +810,10 @@ function App() {
       )}
 
       {/* App Shell: Left Sidebar + Main Workspace */}
-      <div className="flex-1 w-full max-w-[1600px] mx-auto flex relative z-10">
+      <div className="flex-1 w-full max-w-[1600px] mx-auto flex">
         {/* Desktop Collapsible Sidebar */}
         <aside
-          className={`hidden lg:block shrink-0 border-r border-slate-200/80 bg-white/75 backdrop-blur-md sticky top-[57px] h-[calc(100vh-57px)] transition-all duration-200 ${
+          className={`hidden lg:block shrink-0 border-r border-slate-200/80 bg-white sticky top-14 h-[calc(100vh-56px)] transition-all duration-200 ${
             sidebarCollapsed ? 'w-16' : 'w-72'
           }`}
         >
@@ -700,19 +822,9 @@ function App() {
 
         {/* Main Workspace Content */}
         <main className="flex-1 min-w-0 px-3 sm:px-6 lg:px-8 py-5 sm:py-6 flex flex-col">
-          {/* Privacy Notice Banner */}
-          <div className="flex items-center justify-center mb-4">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-emerald-50 text-emerald-800 rounded-full border border-emerald-200/80 shadow-sm text-xs text-center leading-snug">
-              <ShieldCheck size={15} className="shrink-0 text-emerald-600 hidden xs:inline-block" />
-              <span>
-                <strong>{privacyNotice.label}</strong> {privacyNotice.text}
-              </span>
-            </div>
-          </div>
-
-          {/* Breadcrumb & Tool Quick Actions Bar */}
-          {activeTool && (
-            <div className="w-full max-w-5xl mx-auto mb-5 flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 rounded-2xl bg-white/80 backdrop-blur-sm border border-slate-200/80 shadow-sm text-xs">
+          {/* Thin Workspace Breadcrumb & Quick Actions */}
+          {showBreadcrumb && (
+            <div className="w-full max-w-5xl mx-auto mb-5 flex flex-wrap items-center justify-between gap-2 px-3.5 py-2 rounded-xl bg-white border border-slate-200/80 shadow-sm text-xs">
               <div className="flex flex-wrap items-center gap-1.5 text-slate-500">
                 <button
                   type="button"
@@ -722,50 +834,69 @@ function App() {
                   <LayoutGrid size={13} /> Semua Fitur
                 </button>
                 <span>/</span>
-                <span className="font-medium text-slate-600">
-                  {CATEGORY_LABELS[activeTool.category]}
-                </span>
-                <span>/</span>
-                <span className="hidden sm:inline text-slate-500">{activeTool.subGroup}</span>
-                <span className="hidden sm:inline">/</span>
-                <span className="font-bold text-slate-800">{activeTool.name}</span>
+                {isPrivacyActive ? (
+                  <span className="font-bold text-slate-900">Privacy &amp; Policy</span>
+                ) : isFaqActive ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={openPrivacy}
+                      className="font-medium text-slate-600 hover:text-indigo-600 hover:underline"
+                    >
+                      Privacy &amp; Policy
+                    </button>
+                    <span>/</span>
+                    <span className="font-bold text-slate-900">FAQ</span>
+                  </>
+                ) : (
+                  activeTool && (
+                    <>
+                      <span className="font-medium text-slate-600">
+                        {CATEGORY_LABELS[activeTool.category]}
+                      </span>
+                      <span>/</span>
+                      <span className="hidden sm:inline text-slate-500">{activeTool.subGroup}</span>
+                      <span className="hidden sm:inline">/</span>
+                      <span className="font-bold text-slate-900">{activeTool.name}</span>
+                    </>
+                  )
+                )}
               </div>
 
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => toggleFavorite(activeTool.id)}
-                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border font-semibold transition-colors ${
-                    isCurrentToolFavorited
-                      ? 'bg-amber-50 border-amber-300 text-amber-700'
-                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  <Star size={13} fill={isCurrentToolFavorited ? 'currentColor' : 'none'} />
-                  <span>{isCurrentToolFavorited ? 'Difavoritkan' : 'Favorit'}</span>
-                </button>
+                {activeTool && (
+                  <button
+                    type="button"
+                    onClick={() => toggleFavorite(activeTool.id)}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border font-semibold transition-colors ${
+                      isCurrentToolFavorited
+                        ? 'bg-amber-50 border-amber-300 text-amber-700'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Star size={12} fill={isCurrentToolFavorited ? 'currentColor' : 'none'} />
+                    <span>{isCurrentToolFavorited ? 'Difavoritkan' : 'Favorit'}</span>
+                  </button>
+                )}
 
-                {activeTool.id !== 'pipeline:studio' && (
+                {activeTool?.id !== 'pipeline:studio' && (
                   <button
                     type="button"
                     onClick={() => {
                       const p = findNavToolById('pipeline:studio');
                       if (p) selectTool(p);
                     }}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 font-semibold"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/80 text-indigo-700 font-semibold transition-colors"
                   >
-                    <Workflow size={13} /> Pipeline Studio
+                    <Workflow size={12} /> Pipeline Studio
                   </button>
                 )}
               </div>
             </div>
           )}
 
-          {/* Active Tool or Bento Hub */}
-          <div className="flex-1 w-full pb-8">{renderActiveWorkspaceTool()}</div>
-
-          {/* FAQ Keamanan & Privasi Section */}
-          <FAQSection />
+          {/* Active Tool, Privacy Page, or Bento Hub */}
+          <div className="flex-1 w-full pb-6">{renderActiveWorkspaceTool()}</div>
         </main>
       </div>
 
@@ -775,20 +906,40 @@ function App() {
         items={paletteItems}
       />
 
-      {/* Footer */}
-      <footer className="w-full relative z-10 py-5 text-center text-xs text-slate-500 border-t border-slate-200/60 bg-white/50 backdrop-blur-sm">
-        <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2.5">
-          <p>© {new Date().getFullYear()} Tenggoo Studio • Client-Side & Agent-Callable Toolkit</p>
-          <div className="flex items-center gap-2 text-slate-400 text-[11px]">
-            <span>TypeScript</span>
-            <span>•</span>
-            <span>PDF-Lib</span>
-            <span>•</span>
-            <span>PDF.js</span>
-            <span>•</span>
-            <span>MCP & CLI</span>
-            <span>•</span>
-            <span>Tauri</span>
+      {/* Minimal 1-Line Studio Footer */}
+      <footer className="w-full py-3.5 px-4 text-xs text-slate-500 border-t border-slate-200/80 bg-white">
+        <div className="max-w-[1600px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+          <p>&copy; {new Date().getFullYear()} Tenggoo Studio &bull; 100% Client-Side Local Studio</p>
+          <div className="flex items-center gap-4 font-medium">
+            <button
+              type="button"
+              onClick={openHub}
+              className="hover:text-slate-900 transition-colors"
+            >
+              Katalog Fitur
+            </button>
+            <button
+              type="button"
+              onClick={openPrivacy}
+              className="hover:text-emerald-700 transition-colors"
+            >
+              Privacy &amp; Policy
+            </button>
+            <button
+              type="button"
+              onClick={openFaq}
+              className="hover:text-indigo-700 transition-colors"
+            >
+              FAQ
+            </button>
+            <a
+              href="https://github.com/alafgani1000/tenggoo_pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-slate-900 transition-colors"
+            >
+              GitHub
+            </a>
           </div>
         </div>
       </footer>

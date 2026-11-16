@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { UploadCloud } from 'lucide-react';
 
 interface FileDropzoneProps {
@@ -9,20 +9,26 @@ interface FileDropzoneProps {
   helpText?: string;
 }
 
-export const FileDropzone: React.FC<FileDropzoneProps> = ({ 
-  onFilesDrop, 
-  multiple = true, 
-  accept = "application/pdf",
-  label = "Drag & drop PDF files here, or click to select",
-  helpText
+export const FileDropzone: React.FC<FileDropzoneProps> = ({
+  onFilesDrop,
+  multiple = true,
+  accept = 'application/pdf',
+  label = 'Drag & drop PDF files here, or click to select',
+  helpText,
 }) => {
+  const [isDragging, setIsDragging] = useState(false);
+
   const handleDrop = useCallback(
     (e: React.DragEvent<HTMLDivElement>) => {
       e.preventDefault();
+      setIsDragging(false);
       // Handle comma-separated accept string (e.g. "image/png, image/jpeg")
-      const acceptList = accept.split(',').map(a => a.trim());
-      const files = Array.from(e.dataTransfer.files).filter(f => 
-        accept === '*' || acceptList.includes(f.type) || acceptList.some(a => f.name.endsWith(a))
+      const acceptList = accept.split(',').map((a) => a.trim());
+      const files = Array.from(e.dataTransfer.files).filter(
+        (f) =>
+          accept === '*' ||
+          acceptList.includes(f.type) ||
+          acceptList.some((a) => f.name.toLowerCase().endsWith(a.toLowerCase())),
       );
       if (files.length > 0) {
         if (!multiple) {
@@ -32,11 +38,19 @@ export const FileDropzone: React.FC<FileDropzoneProps> = ({
         }
       }
     },
-    [onFilesDrop, multiple, accept]
+    [onFilesDrop, multiple, accept],
   );
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
+    if (!isDragging) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
   };
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -49,19 +63,30 @@ export const FileDropzone: React.FC<FileDropzoneProps> = ({
     <div
       onDrop={handleDrop}
       onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
       className="w-full relative group cursor-pointer"
     >
-      <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-300"></div>
-      <div className="relative glass-panel rounded-2xl p-10 flex flex-col items-center justify-center border-dashed border-2 border-indigo-200 hover:border-indigo-400 transition-colors bg-white/50 hover:bg-white/60">
-        <UploadCloud className="w-16 h-16 text-indigo-500 mb-4 animate-bounce" />
-        <p className="text-lg font-medium text-slate-700 text-center">{label}</p>
-        <p className="text-sm text-slate-500 mt-2 text-center">
-          {helpText || (accept === "application/pdf" ? "Only PDF files are supported" : `Supported files: ${accept}`)}
+      <div
+        className={`relative rounded-2xl border-2 border-dashed p-8 sm:p-10 transition-all flex flex-col items-center justify-center text-center cursor-pointer ${
+          isDragging
+            ? 'border-indigo-500 bg-indigo-50/60 shadow-sm'
+            : 'border-slate-300 bg-white hover:border-indigo-400 hover:bg-slate-50/70 shadow-sm'
+        }`}
+      >
+        <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center mb-3.5 group-hover:scale-105 transition-transform">
+          <UploadCloud className="w-6 h-6" />
+        </div>
+        <p className="text-base font-semibold text-slate-800">{label}</p>
+        <p className="text-xs text-slate-500 mt-1">
+          {helpText ||
+            (accept === 'application/pdf'
+              ? 'Only PDF files are supported'
+              : `Supported files: ${accept}`)}
         </p>
-        
-        <input 
-          type="file" 
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
+
+        <input
+          type="file"
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           multiple={multiple}
           accept={accept}
           onChange={handleFileInput}

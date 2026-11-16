@@ -223,7 +223,7 @@ export const CompressPDF: React.FC = () => {
       : null;
 
   return (
-    <div className="w-full max-w-3xl mx-auto flex flex-col gap-6 animate-float" style={{ animationDuration: '9s' }}>
+    <div className="w-full max-w-3xl mx-auto flex flex-col gap-6">
       <div className="text-center space-y-2">
         <h2 className="text-3xl font-bold text-slate-800">Compress PDF</h2>
         <p className="text-slate-500">Fokus mengecilkan ukuran PDF, dengan fallback otomatis jika perlu</p>
