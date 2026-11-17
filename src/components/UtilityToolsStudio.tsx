@@ -37,7 +37,7 @@ interface UtilityToolsStudioProps {
   onSendToPipeline?: (files: VirtualFile[]) => void;
 }
 
-const SAMPLE_MARKDOWN = `# Laporan Ringkas Proyek Tenggoo
+const SAMPLE_MARKDOWN = `# Laporan Ringkas Proyek
 
 Dokumen ini dihasilkan langsung secara lokal melalui utilitas **Markdown to PDF**.
 
@@ -52,7 +52,7 @@ Dokumen ini dihasilkan langsung secara lokal melalui utilitas **Markdown to PDF*
 Silakan ubah teks ini sesuka hati lalu klik **Generate PDF**.`;
 
 const SAMPLE_TABLE_CSV = `Produk,Kategori,Qty,Harga
-Tenggoo Pro License,Software,2,$49
+WorkTool Pro License,Software,2,$49
 PDF Audit Service,Consulting,1,$120
 Image Batch Pack,Add-on,5,$15`;
 
@@ -79,19 +79,19 @@ export const UtilityToolsStudio: React.FC<UtilityToolsStudioProps> = ({
   const [copiedCli, setCopiedCli] = useState(false);
 
   // QR parameters
-  const [qrText, setQrText] = useState('https://tenggoo.my.id');
+  const [qrText, setQrText] = useState('https://worktool.local');
   const [qrSize, setQrSize] = useState(320);
   const [qrDark, setQrDark] = useState('#0f172a');
   const [qrLight, setQrLight] = useState('#ffffff');
 
   // MD -> PDF parameters
   const [mdText, setMdText] = useState(SAMPLE_MARKDOWN);
-  const [mdTitle, setMdTitle] = useState('Dokumen Tenggoo');
+  const [mdTitle, setMdTitle] = useState('Dokumen Kerja');
   const [mdPageSize, setMdPageSize] = useState<'A4' | 'Letter'>('A4');
   const [mdFontSize, setMdFontSize] = useState(11);
 
   // ZIP & Table & Hash parameters
-  const [archiveName, setArchiveName] = useState('tenggoo_bundle.zip');
+  const [archiveName, setArchiveName] = useState('worktool_bundle.zip');
   const [zipFilter, setZipFilter] = useState('');
   const [tableData, setTableData] = useState(SAMPLE_TABLE_CSV);
   const [tableTitle, setTableTitle] = useState('Laporan Tabel Data');

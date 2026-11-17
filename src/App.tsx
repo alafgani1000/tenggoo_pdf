@@ -16,27 +16,30 @@ import { PipelineStudio } from './components/PipelineStudio';
 import { CommandPalette, type CommandPaletteItem } from './components/CommandPalette';
 import { AllToolsHub } from './components/AllToolsHub';
 import {
+  CATEGORY_FILE_HINTS,
   CATEGORY_LABELS,
   NAV_TOOLS,
   findNavToolByHash,
   findNavToolById,
+  getToolsByCategory,
   type NavCategoryId,
   type NavToolEntry,
 } from './components/navigationCatalog';
 import { FAQSection, PrivacyPolicyView } from './components/FAQSection';
 import type { VirtualFile } from './core/types';
 import {
+  Archive,
   Bot,
   ChevronDown,
   ChevronRight,
   CircleQuestionMark,
+  FileSpreadsheet,
   FileText,
   Image as ImageIcon,
   LayoutGrid,
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
-  QrCode,
   Search,
   ShieldCheck,
   Star,
@@ -91,11 +94,13 @@ function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [sidebarSearch, setSidebarSearch] = useState('');
+  const [hubCategory, setHubCategory] = useState<'all' | NavCategoryId>('all');
   const [expandedCategories, setExpandedCategories] = useState<Record<NavCategoryId, boolean>>({
     pdf: true,
-    image: true,
-    utility: true,
-    pipeline: true,
+    image: false,
+    data: false,
+    utility: false,
+    pipeline: false,
   });
 
   const [pendingPipelineFiles, setPendingPipelineFiles] = useState<VirtualFile[] | undefined>(
@@ -130,23 +135,40 @@ function App() {
 
   useEffect(() => {
     if (activeView.kind === 'privacy') {
-      document.title = 'Privacy & Policy | Tenggoo Studio';
+      document.title = 'Privacy & Policy | Work Tool Super App';
       return;
     }
     if (activeView.kind === 'faq') {
-      document.title = 'FAQ Keamanan | Tenggoo Studio';
+      document.title = 'FAQ Keamanan | Work Tool Super App';
       return;
     }
     if (!activeTool) {
-      document.title = 'Tenggoo Studio — PDF, Image, Utilities & AI Agent';
+      document.title = 'Work Tool Super App — PDF, Image, Utilities & AI Agent';
       return;
     }
-    document.title = `${activeTool.name} | Tenggoo Studio`;
+    document.title = `${activeTool.name} | Work Tool Super App`;
   }, [activeTool, activeView.kind]);
 
   const openHub = useCallback(() => {
+    setHubCategory('all');
     setActiveView({ kind: 'hub' });
     setMobileDrawerOpen(false);
+    window.history.pushState(null, '', '#semua-fitur');
+  }, []);
+
+  const openCategoryHub = useCallback((cat: 'all' | NavCategoryId) => {
+    setHubCategory(cat);
+    setActiveView({ kind: 'hub' });
+    setMobileDrawerOpen(false);
+    if (cat !== 'all') {
+      setExpandedCategories({
+        pdf: cat === 'pdf',
+        image: cat === 'image',
+        data: cat === 'data',
+        utility: cat === 'utility',
+        pipeline: cat === 'pipeline',
+      });
+    }
     window.history.pushState(null, '', '#semua-fitur');
   }, []);
 
@@ -177,6 +199,13 @@ function App() {
   const selectTool = useCallback(
     (tool: NavToolEntry) => {
       setActiveView({ kind: 'tool', toolId: tool.id });
+      setExpandedCategories({
+        pdf: tool.category === 'pdf',
+        image: tool.category === 'image',
+        data: tool.category === 'data',
+        utility: tool.category === 'utility',
+        pipeline: tool.category === 'pipeline',
+      });
       setMobileDrawerOpen(false);
       recordRecentTool(tool.id);
       window.history.pushState(null, '', `#${tool.hash}`);
@@ -243,24 +272,14 @@ function App() {
     const toolEntries: CommandPaletteItem[] = NAV_TOOLS.map((tool) => ({
       id: `cmd-${tool.id}`,
       title: tool.name,
-      subtitle: `${tool.subGroup} — ${tool.shortDesc}`,
+      subtitle: `${tool.subGroup} (${tool.handledFiles}) — ${tool.shortDesc}`,
       categoryLabel: CATEGORY_LABELS[tool.category],
-      keywords: `${tool.name} ${tool.shortDesc} ${tool.subGroup} ${tool.category} ${tool.hash}`,
+      keywords: `${tool.name} ${tool.shortDesc} ${tool.handledFiles} ${tool.subGroup} ${tool.category} ${tool.hash}`,
       onSelect: () => selectTool(tool),
     }));
 
     return [hubEntry, privacyEntry, faqEntry, ...toolEntries];
   }, [openHub, openPrivacy, openFaq, selectTool]);
-
-  const sidebarFilteredTools = useMemo(() => {
-    const q = sidebarSearch.trim().toLowerCase();
-    if (!q) return NAV_TOOLS;
-    return NAV_TOOLS.filter((t) =>
-      `${t.name} ${t.shortDesc} ${t.subGroup} ${CATEGORY_LABELS[t.category]}`
-        .toLowerCase()
-        .includes(q),
-    );
-  }, [sidebarSearch]);
 
   const favoriteToolList = useMemo(
     () =>
@@ -271,19 +290,51 @@ function App() {
   );
 
   const sidebarCategorySections = useMemo(() => {
+    const q = sidebarSearch.trim().toLowerCase();
     const defs: {
       id: Exclude<NavCategoryId, 'pipeline'>;
       label: string;
+      fileHint: string;
       icon: React.ComponentType<{ size?: number; className?: string }>;
       accentText: string;
     }[] = [
-      { id: 'pdf', label: 'PDF Tools', icon: FileText, accentText: 'text-indigo-600' },
-      { id: 'image', label: 'Image Tools', icon: ImageIcon, accentText: 'text-teal-600' },
-      { id: 'utility', label: 'Doc & Utilities', icon: QrCode, accentText: 'text-amber-600' },
+      {
+        id: 'pdf',
+        label: CATEGORY_LABELS.pdf,
+        fileHint: CATEGORY_FILE_HINTS.pdf,
+        icon: FileText,
+        accentText: 'text-indigo-600',
+      },
+      {
+        id: 'image',
+        label: CATEGORY_LABELS.image,
+        fileHint: CATEGORY_FILE_HINTS.image,
+        icon: ImageIcon,
+        accentText: 'text-teal-600',
+      },
+      {
+        id: 'data',
+        label: CATEGORY_LABELS.data,
+        fileHint: CATEGORY_FILE_HINTS.data,
+        icon: FileSpreadsheet,
+        accentText: 'text-amber-600',
+      },
+      {
+        id: 'utility',
+        label: CATEGORY_LABELS.utility,
+        fileHint: CATEGORY_FILE_HINTS.utility,
+        icon: Archive,
+        accentText: 'text-orange-600',
+      },
     ];
 
     return defs.map((sec) => {
-      const items = sidebarFilteredTools.filter((t) => t.category === sec.id);
+      const items = getToolsByCategory(sec.id).filter((t) => {
+        if (!q) return true;
+        return `${t.name} ${t.shortDesc} ${t.handledFiles} ${t.subGroup} ${CATEGORY_LABELS[sec.id]} ${sec.fileHint}`
+          .toLowerCase()
+          .includes(q);
+      });
       const subGroups: { name: string; items: NavToolEntry[] }[] = [];
       for (const item of items) {
         let group = subGroups.find((g) => g.name === item.subGroup);
@@ -295,7 +346,7 @@ function App() {
       }
       return { ...sec, count: items.length, subGroups };
     });
-  }, [sidebarFilteredTools]);
+  }, [sidebarSearch]);
 
   const renderSidebarInner = (isCompactRail: boolean) => {
     const pipelineTool = findNavToolById('pipeline:studio');
@@ -319,13 +370,61 @@ function App() {
               type="button"
               onClick={openHub}
               className={`p-2.5 rounded-xl transition-colors ${
-                isHubActive
+                isHubActive && hubCategory === 'all'
                   ? 'bg-slate-900 text-white shadow-sm'
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
-              title="Semua Fitur (Hub)"
+              title="Semua Fitur"
             >
               <LayoutGrid size={18} />
+            </button>
+            <button
+              type="button"
+              onClick={() => openCategoryHub('pdf')}
+              className={`p-2.5 rounded-xl transition-colors ${
+                (isHubActive && hubCategory === 'pdf') || activeTool?.category === 'pdf'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-indigo-600 hover:bg-indigo-50'
+              }`}
+              title={`${CATEGORY_LABELS.pdf} (${CATEGORY_FILE_HINTS.pdf})`}
+            >
+              <FileText size={18} />
+            </button>
+            <button
+              type="button"
+              onClick={() => openCategoryHub('image')}
+              className={`p-2.5 rounded-xl transition-colors ${
+                (isHubActive && hubCategory === 'image') || activeTool?.category === 'image'
+                  ? 'bg-teal-600 text-white shadow-sm'
+                  : 'text-teal-600 hover:bg-teal-50'
+              }`}
+              title={`${CATEGORY_LABELS.image} (${CATEGORY_FILE_HINTS.image})`}
+            >
+              <ImageIcon size={18} />
+            </button>
+            <button
+              type="button"
+              onClick={() => openCategoryHub('data')}
+              className={`p-2.5 rounded-xl transition-colors ${
+                (isHubActive && hubCategory === 'data') || activeTool?.category === 'data'
+                  ? 'bg-amber-600 text-white shadow-sm'
+                  : 'text-amber-600 hover:bg-amber-50'
+              }`}
+              title={`${CATEGORY_LABELS.data} (${CATEGORY_FILE_HINTS.data})`}
+            >
+              <FileSpreadsheet size={18} />
+            </button>
+            <button
+              type="button"
+              onClick={() => openCategoryHub('utility')}
+              className={`p-2.5 rounded-xl transition-colors ${
+                (isHubActive && hubCategory === 'utility') || activeTool?.category === 'utility'
+                  ? 'bg-orange-600 text-white shadow-sm'
+                  : 'text-orange-600 hover:bg-orange-50'
+              }`}
+              title={`${CATEGORY_LABELS.utility} (${CATEGORY_FILE_HINTS.utility})`}
+            >
+              <Archive size={18} />
             </button>
             {pipelineTool && (
               <button
@@ -333,8 +432,8 @@ function App() {
                 onClick={() => selectTool(pipelineTool)}
                 className={`p-2.5 rounded-xl transition-colors ${
                   activeTool?.id === pipelineTool.id
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'text-indigo-600 hover:bg-indigo-50'
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : 'text-purple-600 hover:bg-purple-50'
                 }`}
                 title={pipelineTool.name}
               >
@@ -399,7 +498,7 @@ function App() {
         <div className="p-3 border-b border-slate-200/80 space-y-2.5">
           <div className="flex items-center justify-between gap-2">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1">
-              Navigasi Studio
+              Menu Berdasarkan File
             </span>
             <button
               type="button"
@@ -448,7 +547,7 @@ function App() {
               type="button"
               onClick={openHub}
               className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${
-                isHubActive
+                isHubActive && hubCategory === 'all'
                   ? 'bg-slate-900 text-white shadow-sm'
                   : 'text-slate-700 hover:bg-slate-100'
               }`}
@@ -457,7 +556,9 @@ function App() {
               <span>Semua Fitur</span>
               <span
                 className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
-                  isHubActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+                  isHubActive && hubCategory === 'all'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-slate-100 text-slate-500'
                 }`}
               >
                 {NAV_TOOLS.length}
@@ -514,27 +615,45 @@ function App() {
             if (section.count === 0) return null;
             const SectionIcon = section.icon;
             const isExpanded = Boolean(sidebarSearch.trim()) || expandedCategories[section.id];
+            const isSectionSelected = isHubActive && hubCategory === section.id;
 
             return (
               <div key={section.id} className="space-y-1.5">
                 <button
                   type="button"
-                  onClick={() =>
-                    setExpandedCategories((prev) => ({
-                      ...prev,
-                      [section.id]: !prev[section.id],
-                    }))
-                  }
-                  className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-slate-100 text-left"
+                  onClick={() => {
+                    const shouldCollapse =
+                      isExpanded && activeView.kind === 'hub' && hubCategory === section.id;
+                    setExpandedCategories({
+                      pdf: section.id === 'pdf' ? !shouldCollapse : false,
+                      image: section.id === 'image' ? !shouldCollapse : false,
+                      data: section.id === 'data' ? !shouldCollapse : false,
+                      utility: section.id === 'utility' ? !shouldCollapse : false,
+                      pipeline: false,
+                    });
+                    if (!shouldCollapse) {
+                      openCategoryHub(section.id);
+                    }
+                  }}
+                  className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-left transition-colors ${
+                    isSectionSelected ? 'bg-slate-100' : 'hover:bg-slate-100'
+                  }`}
                 >
-                  <div className="flex items-center gap-1.5">
-                    <SectionIcon size={14} className={section.accentText} />
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
-                      {section.label}
-                    </span>
-                    <span className="text-[10px] font-semibold text-slate-400">
-                      ({section.count})
-                    </span>
+                  <div className="flex items-start gap-2 min-w-0">
+                    <SectionIcon size={14} className={`${section.accentText} mt-0.5 shrink-0`} />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 truncate">
+                          {section.label}
+                        </span>
+                        <span className="text-[10px] font-semibold text-slate-400">
+                          ({section.count})
+                        </span>
+                      </div>
+                      <span className="block text-[10px] font-medium text-slate-400 truncate">
+                        {section.fileHint}
+                      </span>
+                    </div>
                   </div>
                   {isExpanded ? (
                     <ChevronDown size={14} className="text-slate-400" />
@@ -546,7 +665,7 @@ function App() {
                 {isExpanded && (
                   <div className="space-y-2.5 pl-1">
                     {section.subGroups.map((sub) => (
-                      <div key={sub.name} className="space-y-0.5">
+                      <div key={`${section.id}-${sub.name}`} className="space-y-0.5">
                         <div className="px-2 text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
                           {sub.name}
                         </div>
@@ -555,7 +674,7 @@ function App() {
                           const isActive = activeTool?.id === tool.id;
                           return (
                             <button
-                              key={tool.id}
+                              key={`${section.id}-${tool.id}`}
                               type="button"
                               onClick={() => selectTool(tool)}
                               className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs transition-colors ${
@@ -636,13 +755,15 @@ function App() {
           tools={NAV_TOOLS}
           favoriteIds={favoriteIds}
           recentIds={recentIds}
+          activeCategory={hubCategory}
+          onCategoryChange={openCategoryHub}
           onSelectTool={selectTool}
           onToggleFavorite={toggleFavorite}
         />
       );
     }
 
-    if (activeTool.category === 'pdf' && activeTool.pdfTab) {
+    if (activeTool.pdfTab) {
       const tab = activeTool.pdfTab;
       if (tab === 'merge') return <MergePDF />;
       if (tab === 'split') return <SplitPDF />;
@@ -657,7 +778,7 @@ function App() {
       return <NewPDFToolsStudio key={tab} mode={tab} onSendToPipeline={handleSendToPipeline} />;
     }
 
-    if (activeTool.category === 'image' && activeTool.imageTool) {
+    if (activeTool.imageTool) {
       return (
         <ImageToolsStudio
           activeToolId={activeTool.imageTool}
@@ -670,7 +791,7 @@ function App() {
       );
     }
 
-    if (activeTool.category === 'utility' && activeTool.utilityTool) {
+    if (activeTool.utilityTool) {
       return (
         <UtilityToolsStudio
           activeToolId={activeTool.utilityTool}
@@ -695,6 +816,11 @@ function App() {
   const isPrivacyActive = activeView.kind === 'privacy';
   const isFaqActive = activeView.kind === 'faq';
   const showBreadcrumb = Boolean(activeTool) || isPrivacyActive || isFaqActive;
+  const sameCategoryTools = useMemo(
+    () => (activeTool ? getToolsByCategory(activeTool.category) : []),
+    [activeTool],
+  );
+  const pipelineTool = useMemo(() => findNavToolById('pipeline:studio'), []);
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50/70 font-sans text-slate-900 selection:bg-indigo-500 selection:text-white">
@@ -717,7 +843,7 @@ function App() {
             >
               <img
                 src="/icon.png"
-                alt="Tenggoo Studio"
+                alt="Work Tool Super App"
                 width={28}
                 height={28}
                 className="block rounded-lg shadow-sm"
@@ -727,14 +853,61 @@ function App() {
               />
               <div className="flex items-center gap-2">
                 <span className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">
-                  Tenggoo Studio
+                  Work Tool Super App
                 </span>
-                <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/80">
+                <span className="hidden xl:inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/80">
                   v2.0 Local
                 </span>
               </div>
             </button>
           </div>
+
+          {/* Primary Domain Menu Tabs */}
+          <nav
+            aria-label="Kategori File"
+            className="hidden lg:flex items-center gap-1 bg-slate-100/90 p-1 rounded-xl border border-slate-200/70"
+          >
+            {(
+              [
+                { id: 'all', label: 'Semua' },
+                { id: 'pdf', label: 'File PDF' },
+                { id: 'image', label: 'File Gambar' },
+                { id: 'data', label: 'Teks & Data' },
+                { id: 'utility', label: 'Arsip & File' },
+              ] as const
+            ).map((item) => {
+              const isSelected =
+                (activeView.kind === 'hub' && hubCategory === item.id) ||
+                (item.id !== 'all' && activeTool?.category === item.id);
+              return (
+                <button
+                  key={`header-cat-${item.id}`}
+                  type="button"
+                  onClick={() => openCategoryHub(item.id)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                    isSelected
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+            {pipelineTool && (
+              <button
+                type="button"
+                onClick={() => selectTool(pipelineTool)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                  activeTool?.id === pipelineTool.id
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'text-indigo-700 hover:bg-white/80'
+                }`}
+              >
+                Pipeline
+              </button>
+            )}
+          </nav>
 
           <div className="flex items-center gap-2">
             <button
@@ -851,9 +1024,13 @@ function App() {
                 ) : (
                   activeTool && (
                     <>
-                      <span className="font-medium text-slate-600">
+                      <button
+                        type="button"
+                        onClick={() => openCategoryHub(activeTool.category)}
+                        className="font-medium text-slate-600 hover:text-indigo-600 hover:underline"
+                      >
                         {CATEGORY_LABELS[activeTool.category]}
-                      </span>
+                      </button>
                       <span>/</span>
                       <span className="hidden sm:inline text-slate-500">{activeTool.subGroup}</span>
                       <span className="hidden sm:inline">/</span>
@@ -895,6 +1072,36 @@ function App() {
             </div>
           )}
 
+          {/* In-Tool Quick Switcher Bar: Fitur Sejenis */}
+          {activeTool && sameCategoryTools.length > 1 && (
+            <div className="w-full max-w-5xl mx-auto mb-5 px-3 py-2 rounded-xl bg-white/90 border border-slate-200/70 flex items-center gap-2 overflow-x-auto">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 shrink-0 pr-1">
+                {CATEGORY_LABELS[activeTool.category]}:
+              </span>
+              <div className="flex items-center gap-1.5 shrink-0">
+                {sameCategoryTools.map((sibling) => {
+                  const Icon = sibling.icon;
+                  const active = sibling.id === activeTool.id;
+                  return (
+                    <button
+                      key={`sibling-${sibling.id}`}
+                      type="button"
+                      onClick={() => selectTool(sibling)}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+                        active
+                          ? 'bg-slate-900 text-white font-semibold shadow-sm'
+                          : 'bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200/60'
+                      }`}
+                    >
+                      <Icon size={12} className={active ? 'text-white' : 'text-slate-400'} />
+                      <span>{sibling.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Active Tool, Privacy Page, or Bento Hub */}
           <div className="flex-1 w-full pb-6">{renderActiveWorkspaceTool()}</div>
         </main>
@@ -909,7 +1116,7 @@ function App() {
       {/* Minimal 1-Line Studio Footer */}
       <footer className="w-full py-3.5 px-4 text-xs text-slate-500 border-t border-slate-200/80 bg-white">
         <div className="max-w-[1600px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p>&copy; {new Date().getFullYear()} Tenggoo Studio &bull; 100% Client-Side Local Studio</p>
+          <p>&copy; {new Date().getFullYear()} Work Tool Super App &bull; 100% Client-Side Local Workspace</p>
           <div className="flex items-center gap-4 font-medium">
             <button
               type="button"

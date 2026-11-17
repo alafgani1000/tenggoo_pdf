@@ -67,13 +67,13 @@ const WORKFLOW_PRESETS: WorkflowPreset[] = [
       {
         tool: 'util.md_to_pdf',
         params: {
-          markdown: '# Dokumen Terverifikasi\n\nDokumen ini dibuat dan distempel otomatis oleh Tenggoo Pipeline.\n\n## Status\n- Terverifikasi QR\n- Siap Distribusi',
+          markdown: '# Dokumen Terverifikasi\n\nDokumen ini dibuat dan distempel otomatis oleh Work Tool Super App Pipeline.\n\n## Status\n- Terverifikasi QR\n- Siap Distribusi',
           title: 'Dokumen Verifikasi',
           pageSize: 'A4',
           outputName: 'verified_doc.pdf',
         },
       },
-      { tool: 'util.qr_generate', params: { text: 'https://tenggoo.my.id', size: 240 } },
+      { tool: 'util.qr_generate', params: { text: 'https://worktool.local/verify', size: 240 } },
       { tool: 'pdf.stamp_image', params: { position: 'bottom-right', width: 80, margin: 24 } },
       { tool: 'pdf.page_numbers', params: { position: 'bottom-left', format: 'n-of-total' } },
     ],
@@ -239,9 +239,9 @@ export const PipelineStudio: React.FC<PipelineStudioProps> = ({
   };
 
   const handleExportPipelineJson = () => {
-    const json = JSON.stringify({ name: newPresetName.trim() || 'tenggoo-pipeline', steps: cleanSteps }, null, 2);
+    const json = JSON.stringify({ name: newPresetName.trim() || 'worktool-pipeline', steps: cleanSteps }, null, 2);
     downloadVirtualFile({
-      name: `${(newPresetName.trim() || 'tenggoo-pipeline').replace(/\s+/g, '_')}.pipeline.json`,
+      name: `${(newPresetName.trim() || 'worktool-pipeline').replace(/\s+/g, '_')}.pipeline.json`,
       mimeType: 'application/json',
       bytes: new TextEncoder().encode(json),
     });

@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Tenggoo PDF",
+  "productName": "Work Tool Super App",
   "version": "0.3.2",
-  "identifier": "com.tenggoo.pdf",
+  "identifier": "com.worktool.superapp",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Tenggoo PDF",
+        "title": "Work Tool Super App",
         "width": 800,
         "height": 600,
         "resizable": true,

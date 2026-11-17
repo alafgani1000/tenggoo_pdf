@@ -114,7 +114,7 @@ export const ImageToolsStudio: React.FC<ImageToolsStudioProps> = ({
   const [flipH, setFlipH] = useState(false);
   const [flipV, setFlipV] = useState(false);
 
-  const [wmText, setWmText] = useState('TENGGOO STUDIO');
+  const [wmText, setWmText] = useState('WORK TOOL');
   const [wmPosition, setWmPosition] = useState<
     'center-diagonal' | 'center' | 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' | 'tiled'
   >('bottom-right');
@@ -789,7 +789,7 @@ export const ImageToolsStudio: React.FC<ImageToolsStudioProps> = ({
                   )}
                   <button
                     type="button"
-                    onClick={() => downloadVirtualFiles(outputs, 'tenggoo_images.zip')}
+                    onClick={() => downloadVirtualFiles(outputs, 'worktool_images.zip')}
                     className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm"
                   >
                     <Download size={14} />

@@ -83,7 +83,7 @@ export const PrivacyPolicyView: React.FC<PrivacyPolicyViewProps> = ({ onOpenFaq 
           Kebijakan Privasi &amp; Keamanan Data Lokal
         </h1>
         <p className="text-sm sm:text-base text-slate-600 mt-2 max-w-2xl leading-relaxed">
-          Semua manipulasi PDF, gambar, penyensoran PII, serta otomasi pipeline di Tenggoo Studio
+          Semua manipulasi PDF, gambar, penyensoran PII, serta otomasi pipeline di Work Tool Super App
           berjalan langsung di perangkat Anda tanpa pengunggahan ke server cloud eksternal.
         </p>
 
@@ -116,7 +116,7 @@ export const PrivacyPolicyView: React.FC<PrivacyPolicyViewProps> = ({ onOpenFaq 
             Komitmen Perlindungan Data &amp; Dokumen
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Standar teknis bagaimana Tenggoo Studio menangani file, metadata, dan kata sandi Anda.
+            Standar teknis bagaimana Work Tool Super App menangani file, metadata, dan kata sandi Anda.
           </p>
         </div>
 
@@ -236,7 +236,7 @@ export const FAQSection: React.FC<FAQSectionProps> = ({ onOpenPrivacy }) => {
           <strong className="text-slate-900 font-semibold">Sangat aman.</strong> Berbeda dengan
           layanan online konvensional yang mewajibkan unggahan dokumen ke server cloud pihak ketiga,{' '}
           <span className="font-semibold text-indigo-700">
-            Tenggoo Studio memproses 100% file secara lokal di perangkat Anda (Client-Side)
+            Work Tool Super App memproses 100% file secara lokal di perangkat Anda (Client-Side)
           </span>
           . File Anda tidak pernah dikirim atau meninggalkan komputer maupun smartphone Anda sedetik
           pun.
@@ -283,7 +283,7 @@ export const FAQSection: React.FC<FAQSectionProps> = ({ onOpenPrivacy }) => {
     },
     {
       id: 'item-3',
-      question: 'Apakah Tenggoo Studio menyimpan data dokumen, teks, atau gambar saya?',
+      question: 'Apakah Work Tool Super App menyimpan data dokumen, teks, atau gambar saya?',
       icon: DatabaseZap,
       answer: (
         <p>
@@ -315,7 +315,7 @@ export const FAQSection: React.FC<FAQSectionProps> = ({ onOpenPrivacy }) => {
       icon: Cpu,
       answer: (
         <p>
-          Tenggoo Studio memanfaatkan teknologi lokal modern:{' '}
+          Work Tool Super App memanfaatkan teknologi lokal modern:{' '}
           <strong>WebAssembly (Ghostscript WASM)</strong> untuk kompresi PDF berperforma tinggi,{' '}
           <strong>PDF-Lib &amp; PDF.js</strong> untuk manipulasi dan rendering halaman langsung di
           memori, <strong>HTML5 Canvas</strong> untuk pemrosesan gambar &amp; EXIF stripping, serta{' '}
@@ -326,13 +326,13 @@ export const FAQSection: React.FC<FAQSectionProps> = ({ onOpenPrivacy }) => {
     {
       id: 'item-6',
       question:
-        'Apakah Tenggoo Studio aman digunakan untuk keperluan kantor, instansi, atau dokumen legal?',
+        'Apakah Work Tool Super App aman digunakan untuk keperluan kantor, instansi, atau dokumen legal?',
       icon: FileCheck2,
       answer: (
         <p>
           <strong className="text-slate-900 font-semibold">Ya.</strong> Karena nol transfer data ke
           pihak ketiga serta dukungan eksekusi lokal via aplikasi desktop (Tauri) maupun CLI/MCP
-          lokal, Tenggoo Studio sangat cocok untuk alur kerja dokumen internal, legal, keuangan, dan
+          lokal, Work Tool Super App sangat cocok untuk alur kerja dokumen internal, legal, keuangan, dan
           kepatuhan perlindungan data pribadi.
         </p>
       ),
@@ -353,7 +353,7 @@ export const FAQSection: React.FC<FAQSectionProps> = ({ onOpenPrivacy }) => {
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1.5 max-w-2xl">
             Jawaban lengkap terkait keamanan dokumen, pemrosesan offline, kata sandi, dan teknologi
-            client-side di Tenggoo Studio.
+            client-side di Work Tool Super App.
           </p>
         </div>
 

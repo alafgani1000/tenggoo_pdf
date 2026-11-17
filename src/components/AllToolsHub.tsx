@@ -1,34 +1,102 @@
 import React, { useMemo, useState } from 'react';
 import {
+  Archive,
   Bot,
   Clock,
+  FileSpreadsheet,
   FileText,
   Image as ImageIcon,
   Layers,
-  QrCode,
   Search,
   Star,
   X,
 } from 'lucide-react';
-import { CATEGORY_LABELS, type NavCategoryId, type NavToolEntry } from './navigationCatalog.ts';
+import {
+  CATEGORY_FILE_HINTS,
+  CATEGORY_LABELS,
+  getToolsByCategory,
+  type NavCategoryId,
+  type NavToolEntry,
+} from './navigationCatalog.ts';
 
 interface AllToolsHubProps {
   tools: NavToolEntry[];
   favoriteIds: string[];
   recentIds: string[];
+  activeCategory?: 'all' | NavCategoryId;
+  onCategoryChange?: (cat: 'all' | NavCategoryId) => void;
   onSelectTool: (tool: NavToolEntry) => void;
   onToggleFavorite: (toolId: string) => void;
 }
+
+const DOMAIN_TABS: {
+  id: 'all' | NavCategoryId;
+  label: string;
+  desc: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  accent: string;
+}[] = [
+  {
+    id: 'all',
+    label: 'Semua Fitur',
+    desc: 'Seluruh jenis file & otomasi',
+    icon: Layers,
+    accent: 'text-slate-700 bg-slate-100',
+  },
+  {
+    id: 'pdf',
+    label: CATEGORY_LABELS.pdf,
+    desc: CATEGORY_FILE_HINTS.pdf,
+    icon: FileText,
+    accent: 'text-indigo-700 bg-indigo-50',
+  },
+  {
+    id: 'image',
+    label: CATEGORY_LABELS.image,
+    desc: CATEGORY_FILE_HINTS.image,
+    icon: ImageIcon,
+    accent: 'text-teal-700 bg-teal-50',
+  },
+  {
+    id: 'data',
+    label: CATEGORY_LABELS.data,
+    desc: CATEGORY_FILE_HINTS.data,
+    icon: FileSpreadsheet,
+    accent: 'text-amber-700 bg-amber-50',
+  },
+  {
+    id: 'utility',
+    label: CATEGORY_LABELS.utility,
+    desc: CATEGORY_FILE_HINTS.utility,
+    icon: Archive,
+    accent: 'text-orange-700 bg-orange-50',
+  },
+  {
+    id: 'pipeline',
+    label: CATEGORY_LABELS.pipeline,
+    desc: CATEGORY_FILE_HINTS.pipeline,
+    icon: Bot,
+    accent: 'text-purple-700 bg-purple-50',
+  },
+];
 
 export const AllToolsHub: React.FC<AllToolsHubProps> = ({
   tools,
   favoriteIds,
   recentIds,
+  activeCategory,
+  onCategoryChange,
   onSelectTool,
   onToggleFavorite,
 }) => {
   const [query, setQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<'all' | NavCategoryId>('all');
+  const [internalCategory, setInternalCategory] = useState<'all' | NavCategoryId>('all');
+
+  const categoryFilter = activeCategory ?? internalCategory;
+  const handleCategorySelect = (cat: 'all' | NavCategoryId) => {
+    setInternalCategory(cat);
+    onCategoryChange?.(cat);
+  };
 
   const favoriteTools = useMemo(
     () =>
@@ -47,22 +115,32 @@ export const AllToolsHub: React.FC<AllToolsHubProps> = ({
     [recentIds, tools],
   );
 
-  const filteredTools = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return tools.filter((tool) => {
-      if (categoryFilter !== 'all' && tool.category !== categoryFilter) return false;
-      if (!q) return true;
-      return `${tool.name} ${tool.shortDesc} ${tool.subGroup} ${CATEGORY_LABELS[tool.category]}`
-        .toLowerCase()
-        .includes(q);
-    });
-  }, [tools, query, categoryFilter]);
+  const counts = useMemo(
+    () => ({
+      all: tools.length,
+      pdf: getToolsByCategory('pdf').length,
+      image: getToolsByCategory('image').length,
+      data: getToolsByCategory('data').length,
+      utility: getToolsByCategory('utility').length,
+      pipeline: getToolsByCategory('pipeline').length,
+    }),
+    [tools],
+  );
 
   const groupedByCategory = useMemo(() => {
-    const categories: NavCategoryId[] = ['pdf', 'image', 'utility', 'pipeline'];
+    const q = query.trim().toLowerCase();
+    const categories: NavCategoryId[] =
+      categoryFilter === 'all' ? ['pdf', 'image', 'data', 'utility', 'pipeline'] : [categoryFilter];
+
     return categories
       .map((cat) => {
-        const catTools = filteredTools.filter((t) => t.category === cat);
+        const catTools = getToolsByCategory(cat).filter((tool) => {
+          if (!q) return true;
+          return `${tool.name} ${tool.shortDesc} ${tool.handledFiles} ${tool.subGroup} ${CATEGORY_LABELS[cat]} ${CATEGORY_FILE_HINTS[cat]}`
+            .toLowerCase()
+            .includes(q);
+        });
+
         const subGroups: { name: string; items: NavToolEntry[] }[] = [];
         for (const item of catTools) {
           let group = subGroups.find((g) => g.name === item.subGroup);
@@ -72,29 +150,24 @@ export const AllToolsHub: React.FC<AllToolsHubProps> = ({
           }
           group.items.push(item);
         }
-        return { category: cat, label: CATEGORY_LABELS[cat], count: catTools.length, subGroups };
+        return {
+          category: cat,
+          label: CATEGORY_LABELS[cat],
+          fileHint: CATEGORY_FILE_HINTS[cat],
+          count: catTools.length,
+          subGroups,
+        };
       })
       .filter((section) => section.count > 0);
-  }, [filteredTools]);
+  }, [categoryFilter, query]);
 
-  const counts = useMemo(
-    () => ({
-      all: tools.length,
-      pdf: tools.filter((t) => t.category === 'pdf').length,
-      image: tools.filter((t) => t.category === 'image').length,
-      utility: tools.filter((t) => t.category === 'utility').length,
-      pipeline: tools.filter((t) => t.category === 'pipeline').length,
-    }),
-    [tools],
-  );
-
-  const renderToolCard = (tool: NavToolEntry) => {
+  const renderToolCard = (tool: NavToolEntry, keyPrefix: string) => {
     const Icon = tool.icon;
     const isFav = favoriteIds.includes(tool.id);
 
     return (
       <div
-        key={tool.id}
+        key={`${keyPrefix}${tool.id}`}
         className="group relative bg-white rounded-xl border border-slate-200/90 hover:border-indigo-300 hover:shadow-sm transition-all overflow-hidden"
       >
         <button
@@ -116,6 +189,11 @@ export const AllToolsHub: React.FC<AllToolsHubProps> = ({
             </div>
           </div>
           <p className="text-xs text-slate-500 leading-relaxed line-clamp-2">{tool.shortDesc}</p>
+          <div className="mt-auto pt-1 flex items-center gap-1.5">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200/80">
+              {tool.handledFiles}
+            </span>
+          </div>
         </button>
 
         <button
@@ -143,15 +221,17 @@ export const AllToolsHub: React.FC<AllToolsHubProps> = ({
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-                Katalog Fitur Studio
+                {categoryFilter === 'all'
+                  ? 'Katalog Fitur Kerja'
+                  : `Semua ${CATEGORY_LABELS[categoryFilter]}`}
               </h1>
               <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
-                {tools.length} Fitur • 100% Lokal
+                {counts[categoryFilter]} fitur &bull; 100% Lokal
               </span>
             </div>
             <p className="text-xs sm:text-sm text-slate-500">
-              Pilih fitur PDF, gambar, utilitas dokumen, atau otomasi pipeline langsung di perangkat
-              Anda.
+              Dikelompokkan berdasarkan jenis file yang ditangani (.pdf, gambar JPG/PNG/WebP, dokumen
+              MD/CSV/JSON, dan arsip ZIP).
             </p>
           </div>
 
@@ -161,7 +241,7 @@ export const AllToolsHub: React.FC<AllToolsHubProps> = ({
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Filter fitur (misal: sensor, qr, tabel)..."
+              placeholder="Filter fitur (misal: sensor, qr, pas foto)..."
               className="w-full pl-9 pr-8 py-2 rounded-xl border border-slate-200 bg-slate-50/70 focus:bg-white text-sm text-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
             />
             {query && (
@@ -177,30 +257,48 @@ export const AllToolsHub: React.FC<AllToolsHubProps> = ({
           </div>
         </div>
 
-        {/* Category Filter Tabs */}
-        <div className="flex flex-wrap gap-1.5 pt-1 border-t border-slate-100">
-          {[
-            { id: 'all', label: `Semua Fitur (${counts.all})`, icon: Layers },
-            { id: 'pdf', label: `PDF Tools (${counts.pdf})`, icon: FileText },
-            { id: 'image', label: `Image Tools (${counts.image})`, icon: ImageIcon },
-            { id: 'utility', label: `Doc & Utilities (${counts.utility})`, icon: QrCode },
-            { id: 'pipeline', label: `AI Pipeline (${counts.pipeline})`, icon: Bot },
-          ].map((pill) => {
-            const Icon = pill.icon;
-            const active = categoryFilter === pill.id;
+        {/* Quick Domain Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2 pt-2 border-t border-slate-100">
+          {DOMAIN_TABS.map((tab) => {
+            const Icon = tab.icon;
+            const active = categoryFilter === tab.id;
             return (
               <button
-                key={pill.id}
+                key={tab.id}
                 type="button"
-                onClick={() => setCategoryFilter(pill.id as typeof categoryFilter)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                onClick={() => handleCategorySelect(tab.id)}
+                className={`text-left p-2.5 rounded-xl border transition-all flex items-start gap-2.5 ${
                   active
-                    ? 'bg-slate-900 text-white shadow-sm'
-                    : 'bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                    : 'bg-slate-50/60 hover:bg-slate-100 text-slate-700 border-slate-200/80'
                 }`}
               >
-                <Icon size={13} />
-                <span>{pill.label}</span>
+                <div
+                  className={`p-1.5 rounded-lg shrink-0 ${
+                    active ? 'bg-white/15 text-white' : tab.accent
+                  }`}
+                >
+                  <Icon size={15} />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold truncate">{tab.label}</span>
+                    <span
+                      className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                        active ? 'bg-white/20 text-white' : 'bg-white text-slate-500'
+                      }`}
+                    >
+                      {counts[tab.id]}
+                    </span>
+                  </div>
+                  <p
+                    className={`text-[10px] mt-0.5 line-clamp-1 ${
+                      active ? 'text-slate-300' : 'text-slate-500'
+                    }`}
+                  >
+                    {tab.desc}
+                  </p>
+                </div>
               </button>
             );
           })}
@@ -215,7 +313,7 @@ export const AllToolsHub: React.FC<AllToolsHubProps> = ({
             <span>Favorit ({favoriteTools.length})</span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {favoriteTools.map(renderToolCard)}
+            {favoriteTools.map((tool) => renderToolCard(tool, 'fav-'))}
           </div>
         </section>
       )}
@@ -255,19 +353,24 @@ export const AllToolsHub: React.FC<AllToolsHubProps> = ({
         groupedByCategory.map((section) => (
           <section key={section.category} className="space-y-3.5">
             <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
-              <h2 className="text-base font-bold text-slate-900">{section.label}</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-slate-900">{section.label}</h2>
+                <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200/70">
+                  {section.fileHint}
+                </span>
+              </div>
               <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
                 {section.count} fitur
               </span>
             </div>
 
             {section.subGroups.map((sub) => (
-              <div key={sub.name} className="space-y-2">
+              <div key={`${section.category}-${sub.name}`} className="space-y-2">
                 <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
                   {sub.name}
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {sub.items.map(renderToolCard)}
+                  {sub.items.map((tool) => renderToolCard(tool, `${section.category}-`))}
                 </div>
               </div>
             ))}

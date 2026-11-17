@@ -38,7 +38,7 @@ export function downloadVirtualFile(file: VirtualFile): void {
 
 export async function downloadVirtualFiles(
   files: VirtualFile[],
-  zipArchiveName: string = 'tenggoo_outputs.zip',
+  zipArchiveName: string = 'worktool_outputs.zip',
 ): Promise<void> {
   if (files.length === 0) return;
   if (files.length === 1) {

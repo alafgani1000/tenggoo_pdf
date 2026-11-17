@@ -1,6 +1,6 @@
-# Tenggoo Studio (`tenggoo_pdf`)
+# Work Tool Super App
 
-**Tenggoo Studio** adalah toolkit pengolah file **100% lokal (Client-Side & On-Device)** untuk Web, Desktop (Tauri), dan **AI Agent** (Antigravity, OpenAI Codex, Claude Code, Cursor). Seluruh **38 fungsi** PDF, Image, dan Utility dibangun di atas satu *Headless Core Engine* (`src/core/`) sehingga dapat digunakan secara interaktif lewat GUI maupun dipanggil dan dikombinasikan langsung oleh AI Agent melalui **CLI (`tenggoo`)**, **MCP Server (`tenggoo-mcp`)**, dan **TypeScript SDK**.
+**Work Tool Super App** adalah toolkit pengolah file **100% lokal (Client-Side & On-Device)** untuk Web, Desktop (Tauri), dan **AI Agent** (Antigravity, OpenAI Codex, Claude Code, Cursor). Seluruh **38 fungsi** PDF, Image, dan Utility dibangun di atas satu *Headless Core Engine* (`src/core/`) sehingga dapat digunakan secara interaktif lewat GUI maupun dipanggil dan dikombinasikan langsung oleh AI Agent melalui **CLI (`tenggoo`)**, **MCP Server (`tenggoo-mcp`)**, dan **TypeScript SDK**.
 
 ---
 
