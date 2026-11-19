@@ -9,6 +9,7 @@ import {
   EyeOff,
   FileSearch,
   FileText,
+  GitCompare,
   ImagePlus,
   LayoutGrid,
   PenTool,
@@ -38,7 +39,8 @@ export type NewPdfToolMode =
   | 'redact-text'
   | 'form-pdf'
   | 'nup-pdf'
-  | 'extract-tables';
+  | 'extract-tables'
+  | 'diff-pdf';
 
 interface NewPDFToolsStudioProps {
   mode: NewPdfToolMode;
@@ -47,6 +49,7 @@ interface NewPDFToolsStudioProps {
 
 export const NewPDFToolsStudio: React.FC<NewPDFToolsStudioProps> = ({ mode, onSendToPipeline }) => {
   const [pdfFile, setPdfFile] = useState<VirtualFile | null>(null);
+  const [secondPdfFile, setSecondPdfFile] = useState<VirtualFile | null>(null);
   const [stampImage, setStampImage] = useState<VirtualFile | null>(null);
   const [outputFiles, setOutputFiles] = useState<VirtualFile[]>([]);
   const [textPreview, setTextPreview] = useState<string>('');
@@ -122,6 +125,9 @@ export const NewPDFToolsStudio: React.FC<NewPDFToolsStudioProps> = ({ mode, onSe
   const [tableFormat, setTableFormat] = useState<'markdown' | 'csv' | 'json'>('markdown');
   const [tableRowTol, setTableRowTol] = useState(5);
 
+  // Diff 2 PDFs options
+  const [diffFormat, setDiffFormat] = useState<'markdown' | 'json'>('markdown');
+
   const outputPreviewUrl = useMemo(() => {
     const first = outputFiles[0];
     if (!first || first.mimeType !== 'application/pdf') return null;
@@ -153,7 +159,9 @@ export const NewPDFToolsStudio: React.FC<NewPDFToolsStudioProps> = ({ mode, onSe
                     : 'pdf.form_fill'
                   : mode === 'nup-pdf'
                     ? 'pdf.nup'
-                    : 'pdf.extract_tables';
+                    : mode === 'diff-pdf'
+                      ? 'pdf.diff_text'
+                      : 'pdf.extract_tables';
 
   const cliCommand = useMemo(() => {
     const pdfName = pdfFile?.name ?? 'document.pdf';
@@ -228,6 +236,11 @@ export const NewPDFToolsStudio: React.FC<NewPDFToolsStudioProps> = ({ mode, onSe
       const params = JSON.stringify({ format: tableFormat, rowTolerancePt: tableRowTol });
       return `node --no-warnings --experimental-strip-types src/agent/cli.ts run pdf.extract_tables -i "${pdfName}" --params '${params}' --json`;
     }
+    if (mode === 'diff-pdf') {
+      const pdfBName = secondPdfFile?.name ?? 'document_v2.pdf';
+      const params = JSON.stringify({ format: diffFormat });
+      return `node --no-warnings --experimental-strip-types src/agent/cli.ts run pdf.diff_text -i "${pdfName}" "${pdfBName}" --params '${params}' --json`;
+    }
     const params = JSON.stringify({
       margin: cropUniform,
       ...(cropTop ? { top: Number(cropTop) } : {}),
@@ -240,6 +253,7 @@ export const NewPDFToolsStudio: React.FC<NewPDFToolsStudioProps> = ({ mode, onSe
   }, [
     mode,
     pdfFile,
+    secondPdfFile,
     stampImage,
     extractFormat,
     extractPages,
@@ -279,12 +293,23 @@ export const NewPDFToolsStudio: React.FC<NewPDFToolsStudioProps> = ({ mode, onSe
     nupOrientation,
     tableFormat,
     tableRowTol,
+    diffFormat,
   ]);
 
   const handleDropPdf = async (files: File[]) => {
     if (files.length === 0) return;
     const [vf] = await filesToVirtualFiles([files[0]]);
     setPdfFile(vf);
+    setOutputFiles([]);
+    setTextPreview('');
+    setSummary('');
+    setError(null);
+  };
+
+  const handleDropSecondPdf = async (files: File[]) => {
+    if (files.length === 0) return;
+    const [vf] = await filesToVirtualFiles([files[0]]);
+    setSecondPdfFile(vf);
     setOutputFiles([]);
     setTextPreview('');
     setSummary('');
@@ -485,6 +510,18 @@ export const NewPDFToolsStudio: React.FC<NewPDFToolsStudioProps> = ({ mode, onSe
         if (res.files[0]) {
           setTextPreview(new TextDecoder('utf-8').decode(res.files[0].bytes));
         }
+      } else if (mode === 'diff-pdf') {
+        if (!secondPdfFile) {
+          throw new Error('Silakan upload file PDF kedua untuk dibandingkan.');
+        }
+        const res = await tool.execute([pdfFile, secondPdfFile], {
+          format: diffFormat,
+        });
+        setOutputFiles(res.files);
+        setSummary(res.summary);
+        if (res.files[0]) {
+          setTextPreview(new TextDecoder('utf-8').decode(res.files[0].bytes));
+        }
       } else {
         const res = await tool.execute([pdfFile], {
           margin: cropUniform,
@@ -561,12 +598,19 @@ export const NewPDFToolsStudio: React.FC<NewPDFToolsStudioProps> = ({ mode, onSe
                         desc: 'Kelompokkan teks PDF berdasarkan koordinat baris & kolom menjadi tabel siap olah',
                         icon: Table,
                       }
-                    : {
-                        badge: 'Page Trim & Margin Cropper',
-                        title: 'Potong Margin Halaman PDF',
-                        desc: 'Pangkas ruang kosong di tepi halaman PDF secara seragam atau per sisi (atas, bawah, kiri, kanan)',
-                        icon: Crop,
-                      };
+                    : mode === 'diff-pdf'
+                      ? {
+                          badge: 'Document Version Comparison',
+                          title: 'Bandingkan 2 PDF (Text Diff)',
+                          desc: 'Bandingkan perubahan teks halaman demi halaman antara dua versi dokumen PDF ke laporan Markdown atau JSON',
+                          icon: GitCompare,
+                        }
+                      : {
+                          badge: 'Page Trim & Margin Cropper',
+                          title: 'Potong Margin Halaman PDF',
+                          desc: 'Pangkas ruang kosong di tepi halaman PDF secara seragam atau per sisi (atas, bawah, kiri, kanan)',
+                          icon: Crop,
+                        };
 
   const HeaderIcon = headerMeta.icon;
 
@@ -581,7 +625,15 @@ export const NewPDFToolsStudio: React.FC<NewPDFToolsStudioProps> = ({ mode, onSe
       </div>
 
       {!pdfFile ? (
-        <FileDropzone onFilesDrop={handleDropPdf} multiple={false} label="Pilih atau Drop file PDF" />
+        <FileDropzone
+          onFilesDrop={handleDropPdf}
+          multiple={false}
+          label={
+            mode === 'diff-pdf'
+              ? 'Pilih atau Drop file PDF Pertama (Dokumen A)'
+              : 'Pilih atau Drop file PDF'
+          }
+        />
       ) : (
         <div className="bg-white/85 backdrop-blur-md rounded-2xl p-6 shadow-sm border border-slate-200 space-y-5">
           <div className="flex items-center justify-between bg-slate-50 p-4 rounded-xl border border-slate-100">
@@ -601,7 +653,7 @@ export const NewPDFToolsStudio: React.FC<NewPDFToolsStudioProps> = ({ mode, onSe
               }}
               className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
             >
-              Ganti PDF
+              {mode === 'diff-pdf' ? 'Ganti PDF A' : 'Ganti PDF'}
             </button>
           </div>
 
@@ -1082,6 +1134,56 @@ export const NewPDFToolsStudio: React.FC<NewPDFToolsStudioProps> = ({ mode, onSe
             </div>
           )}
 
+          {mode === 'diff-pdf' && (
+            <div className="space-y-4">
+              {!secondPdfFile ? (
+                <FileDropzone
+                  onFilesDrop={handleDropSecondPdf}
+                  multiple={false}
+                  label="Pilih atau Drop file PDF Kedua (Dokumen B)"
+                />
+              ) : (
+                <div className="flex items-center justify-between bg-rose-50/70 p-4 rounded-xl border border-rose-200">
+                  <div className="flex items-center gap-3">
+                    <FileText className="text-rose-500 shrink-0" size={24} />
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">{secondPdfFile.name}</p>
+                      <p className="text-xs text-slate-500">
+                        {formatByteSize(secondPdfFile.bytes.byteLength)}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSecondPdfFile(null);
+                      setOutputFiles([]);
+                      setTextPreview('');
+                      setSummary('');
+                    }}
+                    className="text-sm text-rose-600 hover:text-rose-700 font-medium"
+                  >
+                    Ganti PDF B
+                  </button>
+                </div>
+              )}
+
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Format Laporan Diff
+                </label>
+                <select
+                  value={diffFormat}
+                  onChange={(e) => setDiffFormat(e.target.value as typeof diffFormat)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-sm"
+                >
+                  <option value="markdown">Markdown Report (.md)</option>
+                  <option value="json">Structured JSON (.json)</option>
+                </select>
+              </div>
+            </div>
+          )}
+
           {/* CLI Box */}
           <div className="p-3 rounded-xl bg-slate-900 text-slate-200 text-xs font-mono flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 overflow-x-auto">
@@ -1113,6 +1215,7 @@ export const NewPDFToolsStudio: React.FC<NewPDFToolsStudioProps> = ({ mode, onSe
             onClick={handleRun}
             disabled={
               isProcessing ||
+              (mode === 'diff-pdf' && !secondPdfFile) ||
               (mode === 'stamp-image' && !stampImage && !(stampSourceMode === 'signature' && hasDrawnSignature))
             }
             className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white py-3.5 px-6 rounded-xl font-bold shadow-md disabled:opacity-50"

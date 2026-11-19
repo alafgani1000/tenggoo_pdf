@@ -10,7 +10,12 @@ declare module '@jspawn/ghostscript-wasm/gs.mjs' {
   type GhostscriptModuleFactory = (options?: {
     locateFile?: (path: string) => string;
     noInitialRun?: boolean;
+    print?: (text: string) => void;
     printErr?: (text: string) => void;
+    instantiateWasm?: (
+      imports: WebAssembly.Imports,
+      receiveInstance: (instance: WebAssembly.Instance) => void,
+    ) => Record<string, unknown>;
   }) => Promise<GhostscriptModule>;
 
   const createGhostscriptModule: GhostscriptModuleFactory;
@@ -29,7 +34,12 @@ declare module '@jspawn/ghostscript-wasm/gs.js' {
   type GhostscriptModuleFactory = (options?: {
     locateFile?: (path: string) => string;
     noInitialRun?: boolean;
+    print?: (text: string) => void;
     printErr?: (text: string) => void;
+    instantiateWasm?: (
+      imports: WebAssembly.Imports,
+      receiveInstance: (instance: WebAssembly.Instance) => void,
+    ) => Record<string, unknown>;
   }) => Promise<GhostscriptModule>;
 
   const createGhostscriptModule: GhostscriptModuleFactory;

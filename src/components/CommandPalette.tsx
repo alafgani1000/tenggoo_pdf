@@ -63,6 +63,9 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
       onClick={onClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Cari fitur cepat"
         className="w-full max-w-xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
@@ -71,6 +74,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
           <input
             ref={inputRef}
             type="text"
+            aria-label="Cari fitur"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {

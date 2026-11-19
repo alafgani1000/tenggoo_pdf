@@ -58,7 +58,8 @@ export type PdfSubTabId =
   | 'crop-pdf'
   | 'form-pdf'
   | 'nup-pdf'
-  | 'extract-tables';
+  | 'extract-tables'
+  | 'diff-pdf';
 
 export type ImageSubTabId = ImageToolId;
 export type UtilitySubTabId = UtilityTab;
@@ -217,6 +218,18 @@ export const NAV_TOOLS: NavToolEntry[] = [
     icon: Table,
     badgeColor: 'text-teal-700 bg-teal-50 border-teal-200',
     pdfTab: 'extract-tables',
+  },
+  {
+    id: 'pdf:diff-pdf',
+    hash: 'bandingkan-pdf',
+    name: 'Bandingkan 2 PDF',
+    shortDesc: 'Bandingkan perbedaan teks antar 2 versi PDF per halaman',
+    handledFiles: '.pdf',
+    category: 'pdf',
+    subGroup: 'Kompres, Konversi & Ekstrak PDF',
+    icon: GitCompare,
+    badgeColor: 'text-rose-700 bg-rose-50 border-rose-200',
+    pdfTab: 'diff-pdf',
   },
 
   // ================= FILE PDF: Edit, Stempel & Form PDF =================
